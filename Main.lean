@@ -44,6 +44,7 @@ def main : IO Unit := do
   let A := P.atom "A"
   let B := P.atom "B"
   let s := initState (emptyList: ListMap Nat P)
-      (.imp (.and A B) (.and B A))
+      -- (.imp (.and A B) (.and B A))
+      (.imp (.and (.imp A B) (.imp B .fals)) (.imp A .fals))
   EchoLine.main_loop apply s prompt
   IO.println "Goodbye!"

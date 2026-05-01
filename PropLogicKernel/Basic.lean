@@ -3,7 +3,7 @@ import PropLogicKernel.ListMap
 
 -- proposition
 inductive P where
-  | false: P
+  | fals: P
   | atom (name: String): P
   | and (this: P) (that: P): P
   | or (this: P) (that: P): P

@@ -83,7 +83,7 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
         hyp := (Map.set (Map.set g.hyp count A) (count+1) B),
         goal := g.goal,
       }])
-    | (_, .cases _, some (.false)) =>
+    | (_, .cases _, some (.fals)) =>
       Except.ok (count, [])
 
     -- if goal is A ∨ B

@@ -2,7 +2,7 @@ import PropLogicKernel.Basic
 
 def toStringProp (p: P): String :=
   match p with
-    | .false => "False"
+    | .fals => "⊥"
     | .atom name => name
     | .and this that => s!"({toStringProp this} ∧ {toStringProp that})"
     | .or this that => s!"({toStringProp this} ∨ {toStringProp that})"
@@ -15,7 +15,7 @@ def printProp (p: P) (parent: Option P := none): String :=
       | none => 999
       | some p =>
         match p with
-          | .false => 0
+          | .fals => 0
           | .atom _ => 0
           | .and _ _ => 1
           | .or _ _ => 2
@@ -28,7 +28,7 @@ def printProp (p: P) (parent: Option P := none): String :=
     if thisPrec ≥ parentPrec then s!"({s})" else s
 
   match p with
-    | .false => "False"
+    | .fals => ".false"
     | .atom name => name
     | .and this that => addOptionalParens s!"{printProp this p} ∧ {printProp that p}"
     | .or this that => addOptionalParens s!"{printProp this p} ∨ {printProp that p}"
