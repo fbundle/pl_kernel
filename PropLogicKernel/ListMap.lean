@@ -4,7 +4,6 @@ class Map (ζ: Type u) (α: Type v) (β: Type w) [BEq α] where
   set (z: ζ) (key: α) (val: β): ζ
   iter (z: ζ): List (α × β)
 
-
 def ListMap α β [BEq α] := List (α × β)
 
 def get [BEq α] (map: ListMap α β) (key: α): Option β :=
