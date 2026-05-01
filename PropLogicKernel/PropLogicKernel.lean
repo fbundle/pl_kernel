@@ -1,20 +1,14 @@
 import PropLogicKernel.ListMap
 
 
-abbrev Name := String
-
 -- proposition
 inductive P where
   | false: P
-  | atom (name: Name): P
+  | atom (name: String): P
   | not (this: P): P
   | and (this: P) (that: P): P
   | or (this: P) (that: P): P
   | imp (this: P) (that: P): P
-
-
-
-abbrev Key := Nat
 
 -- tactic
 inductive T where
@@ -23,10 +17,10 @@ inductive T where
   | intro: T
   -- if goal is Q and h: P → Q
   -- change to to P
-  | apply (h: Key): T
+  | apply (h: Nat): T
   -- if goal is P and h: P
   -- done
-  | exact (h: Key): T
+  | exact (h: Nat): T
   -- if goal is P ∧ Q
   -- split into two goals P and Q
   | constructor: T
@@ -36,7 +30,7 @@ inductive T where
   -- add (h₁: P) and (h₂: Q)
   -- if h: False
   -- done ex falso quodlibet (from False, anything follows)
-  | cases (h: Key): T
+  | cases (h: Nat): T
   -- if goal is P ∨ Q
   -- change goal to P
   | left: T
@@ -47,11 +41,15 @@ inductive T where
 
 
 -- problem
-structure G (α: Type) [Map α Key P] where
+structure G (α: Type) [Map α Nat P] where
   hyp: α
   goal: P
 
-abbrev  State α [Map α Key P] := List (G α)
 
-def applyTactic? {α} [Map α Key P] (stack: State α) (t: T): Except String (State α) :=
+-- state
+structure S (α: Type) [Map α Nat P] where
+  count: Nat
+  stack: List (G α)
+
+def applyTactic? {α} [Map α Nat P] (s: S α) (t: T): Except String (S α) :=
   sorry
