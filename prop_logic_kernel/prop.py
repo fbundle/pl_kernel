@@ -3,35 +3,35 @@
 from pydantic import BaseModel
 
 
-class Type(BaseModel):
+class Prop(BaseModel):
     ...
 
-class Term(Type):
+class Name(Prop):
     name: str
 
-class Not(Type):
-    this: Type
+class Not(Prop):
+    this: Prop
 
-class And(Type):
-    left: Type
-    right: Type
+class And(Prop):
+    left: Prop
+    right: Prop
 
-class Or(Type):
-    left: Type
-    right: Type
+class Or(Prop):
+    left: Prop
+    right: Prop
 
-class Imp(Type):
-    left: Type
-    right: Type
+class Imp(Prop):
+    left: Prop
+    right: Prop
 
-class Fals(Type):
+class Fals(Prop):
     ...
 
-def _type_priority(t: Type | None) -> int:
+def _Prop_priority(t: Prop | None) -> int:
     if t is None:
         return 999
     # Imp Or And Not
-    if isinstance(t, Term):
+    if isinstance(t, Name):
         return 0
     elif isinstance(t, Not):
         return 1
@@ -46,29 +46,40 @@ def _type_priority(t: Type | None) -> int:
     else:
         raise NotImplementedError
 
-def to_string(t: Type, parent: Type | None = None) -> str:
+def to_string(t: Prop, parent: Prop | None = None) -> str:
     # order
     # Imp Or And Not
-    if isinstance(t, Term):
+    if isinstance(t, Name):
         return t.name
     elif isinstance(t, Not):
         return f"¬{to_string(t.this, parent=t)}"
     elif isinstance(t, And):
         s = f"{to_string(t.left, parent=t)} ∧ {to_string(t.right, parent=t)}"
-        if _type_priority(parent) <= _type_priority(t):
+        if _Prop_priority(parent) <= _Prop_priority(t):
             s = f"({s})"
         return s
     elif isinstance(t, Or):
         s = f"{to_string(t.left, parent=t)} ∨ {to_string(t.right, parent=t)}"
-        if _type_priority(parent) <= _type_priority(t):
+        if _Prop_priority(parent) <= _Prop_priority(t):
             s = f"({s})"
         return s
     elif isinstance(t, Imp):
         s = f"{to_string(t.left, parent=t)} → {to_string(t.right, parent=t)}"
-        if _type_priority(parent) <= _type_priority(t):
+        if _Prop_priority(parent) <= _Prop_priority(t):
             s = f"({s})"
         return s
     elif isinstance(t, Fals):
         return "False"
     else:
         raise NotImplementedError
+
+if __name__ == "__main__":
+    A = Name(name="A")
+    B = Name(name="B")
+    C = Name(name="C")
+
+    x = Imp(
+        left=And(left=Or(left=A, right=B), right=C),
+        right=Or(left=And(left=A, right=B), right=C),
+    )
+    print(to_string(x))
