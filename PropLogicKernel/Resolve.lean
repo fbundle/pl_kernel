@@ -113,9 +113,10 @@ def resolveTactic? [Map α Nat P] (s: S α) (t: T): Except String (S α) :=
 def resolveTacticMany? [Map α Nat P] (s: S α) (ts: List T): Except String (S α) :=
   match s.stack with
     | [] =>
+      dbg_trace s!"\nno_more_goal\n"
       Except.ok s
     | g :: _ =>
-      dbg_trace s!"current goal\n {g}"
+      dbg_trace s!"\nhead_proof_state\n{g}"
       match ts with
         | [] =>
           Except.error "empty tactic"
@@ -123,17 +124,22 @@ def resolveTacticMany? [Map α Nat P] (s: S α) (ts: List T): Except String (S �
           match resolveTactic? s t with
             | Except.error msg => Except.error msg
             | Except.ok s =>
-              dbg_trace s!"resolved tactic {t}"
+              dbg_trace s!"resolved {t}\n"
               resolveTacticMany? s ts
 
 def test: Nat :=
   let A := P.atom "A"
+  let B := P.atom "B"
 
-  let s := initState (emptyList: ListMap Nat P) (.imp A A)
+  let s := initState (emptyList: ListMap Nat P)
+    (.imp (.and A B) (.and B A))
 
   let ts: List T := [
     T.intro,
-    T.exact 0,
+    T.cases 0,
+    T.constructor,
+    T.exact 2,
+    T.exact 1,
   ]
 
 
