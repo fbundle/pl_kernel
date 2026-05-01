@@ -5,7 +5,6 @@ import PropLogicKernel.ListMap
 inductive P where
   | false: P
   | atom (name: String): P
-  | not (this: P): P
   | and (this: P) (that: P): P
   | or (this: P) (that: P): P
   | imp (this: P) (that: P): P

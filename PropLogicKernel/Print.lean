@@ -4,7 +4,6 @@ def toStringProp (p: P): String :=
   match p with
     | .false => "False"
     | .atom name => name
-    | .not this => s!"¬ {toStringProp this}"
     | .and this that => s!"({toStringProp this} ∧ {toStringProp that})"
     | .or this that => s!"({toStringProp this} ∨ {toStringProp that})"
     | .imp this that => s!"({toStringProp this} → {toStringProp that})"
@@ -18,7 +17,6 @@ def printProp (p: P) (parent: Option P := none): String :=
         match p with
           | .false => 0
           | .atom _ => 0
-          | .not _ => 0
           | .and _ _ => 1
           | .or _ _ => 2
           | .imp _ _ => 3
@@ -32,7 +30,6 @@ def printProp (p: P) (parent: Option P := none): String :=
   match p with
     | .false => "False"
     | .atom name => name
-    | .not this => s!"¬ {printProp this p}"
     | .and this that => addOptionalParens s!"{printProp this p} ∧ {printProp that p}"
     | .or this that => addOptionalParens s!"{printProp this p} ∨ {printProp that p}"
     | .imp this that => addOptionalParens s!"{printProp this p} → {printProp that p}"
