@@ -65,5 +65,5 @@ structure G (α: Type) [Ctx α] where
 
 abbrev  State α [Ctx α] := List (G α)
 
-def apply_tactic {α} [Ctx α] (stack: State α) (t: T): State α :=
+def applyTactic? {α} [Ctx α] (stack: State α) (t: T): Except String (State α) :=
   sorry
