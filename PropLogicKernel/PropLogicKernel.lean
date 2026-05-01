@@ -1,22 +1,18 @@
 
+abbrev Name := String
+
 -- proposition
 inductive P where
   | false: P
+  | atom (name: Name): P
   | not (this: P): P
   | and (this: P) (that: P): P
   | or (this: P) (that: P): P
   | imp (this: P) (that: P): P
 
-def toString (p: P): String :=
-  match p with
-    | .false => "False"
-    | .not this => s!"¬ {toString this}"
-    | .and this that => s!"({toString this} ∧ {toString that})"
-    | .or this that => s!"({toString this} ∨ {toString that})"
-    | .imp this that => s!"({toString this} → {toString that})"
 
 
-abbrev Name := Nat
+abbrev Key := Nat
 
 -- tactic
 inductive T where
@@ -25,10 +21,10 @@ inductive T where
   | intro: T
   -- if goal is Q and h: P → Q
   -- change to to P
-  | apply (h: Name): T
+  | apply (h: Key): T
   -- if goal is P and h: P
   -- done
-  | exact (h: Name): T
+  | exact (h: Key): T
   -- if goal is P ∧ Q
   -- split into two goals P and Q
   | constructor: T
@@ -38,7 +34,7 @@ inductive T where
   -- add (h₁: P) and (h₂: Q)
   -- if h: False
   -- done ex falso quodlibet (from False, anything follows)
-  | cases (h: Name): T
+  | cases (h: Key): T
   -- if goal is P ∨ Q
   -- change goal to P
   | left: T
@@ -48,8 +44,8 @@ inductive T where
 
 -- hash map
 class Ctx (α: Type) where
-  get (name: Name): Option P
-  set (m: α) (name: Name) (prop: P): α
+  get (name: Key): Option P
+  set (m: α) (name: Key) (prop: P): α
   size: Nat
 
 -- hypothesis
