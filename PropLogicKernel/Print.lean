@@ -9,7 +9,7 @@ def toStringProp (p: P): String :=
     | .imp this that => s!"({toStringProp this} → {toStringProp that})"
 
 
-def printProp (p: P) (parent: Option P := none): String :=
+def printProp (p: P) (parent: Option P := none) (strict: Bool := False): String :=
   let precedence (p: Option P): Nat :=
     match p with
       | none => 999
@@ -24,15 +24,23 @@ def printProp (p: P) (parent: Option P := none): String :=
   let thisPrec := precedence p
   let parentPrec := precedence parent
 
+
+  -- right precedence - we prefer to remove parens on the right
+  -- A ∧ B ∧ C = A ∧ (B ∧ C)
+  -- A ∨ B ∨ C = A ∨ (B ∨ C)
+  -- A → B → C = A → (B → C)
+
   let addOptionalParens (s: String): String :=
-    if thisPrec ≥ parentPrec then s!"({s})" else s
+    if strict ∧ thisPrec ≥ parentPrec then s!"({s})" else
+    if (¬ strict) ∧ thisPrec > parentPrec then s!"({s})" else
+    s
 
   match p with
     | .fals => "⊥"
     | .atom name => name
-    | .and this that => addOptionalParens s!"{printProp this p} ∧ {printProp that p}"
-    | .or this that => addOptionalParens s!"{printProp this p} ∨ {printProp that p}"
-    | .imp this that => addOptionalParens s!"{printProp this p} → {printProp that p}"
+    | .and this that => addOptionalParens s!"{printProp this p true} ∧ {printProp that p false}"
+    | .or this that => addOptionalParens s!"{printProp this p true} ∨ {printProp that p false}"
+    | .imp this that => addOptionalParens s!"{printProp this p true} → {printProp that p false}"
 
 
 instance: ToString P where
