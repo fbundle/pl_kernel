@@ -28,7 +28,7 @@ def printProp (p: P) (parent: Option P := none): String :=
     if thisPrec ≥ parentPrec then s!"({s})" else s
 
   match p with
-    | .fals => ".false"
+    | .fals => "⊥"
     | .atom name => name
     | .and this that => addOptionalParens s!"{printProp this p} ∧ {printProp that p}"
     | .or this that => addOptionalParens s!"{printProp this p} ∨ {printProp that p}"
