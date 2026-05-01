@@ -45,15 +45,10 @@ inductive T where
   | right: T
 
 
--- hypothesis
-structure H (α: Type) [Map α Key P] where
-  parent: Option (H α)
-  terms: α
-
 
 -- problem
 structure G (α: Type) [Map α Key P] where
-  hypothesis: H α
+  hyp: α
   goal: P
 
 abbrev  State α [Map α Key P] := List (G α)
