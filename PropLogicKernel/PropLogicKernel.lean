@@ -44,9 +44,9 @@ inductive T where
 
 -- hash map
 class Ctx (α: Type) where
-  get (name: Key): Option P
-  set (m: α) (name: Key) (prop: P): α
-  size: Nat
+  get (key: Key): Option P
+  set (m: α) (key: Key) (prop: P): α
+  iter: List (Key × P)
 
 -- hypothesis
 structure H (α: Type) [Ctx α] where
