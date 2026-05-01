@@ -20,12 +20,16 @@ def parseTactic? (s: String): Option T :=
 
 abbrev State := S (ListMap Nat P)
 
-def printState (s: State): String :=
-  match s.stack with
-    | [] => "no_more_goal"
-    | g :: _ => s!"current_goal (1 / {s.stack.length})\n{g}"
+def isDone (s: State): Bool := s.stack.length == 0
 
-def apply (s: State) (line: String): State × String :=
+def prompt (s: State): String :=
+  match s.stack with
+    | [] => "\nno_more_goal"
+    | g :: _ => s!"\ncurrent_goal (1 / {s.stack.length})\n{g}\n> "
+
+def apply (s: State) (line: String): Option (State × String) :=
+  if isDone s then none else
+
   let t?: Option T := parseTactic? line.trimAscii.toString
   match t? with
     | none => (s, "parse error, try again")
@@ -33,8 +37,7 @@ def apply (s: State) (line: String): State × String :=
       match resolveTactic? s t with
         | Except.error msg => (s, msg)
         | Except.ok s =>
-          let msg := s!"resolved tactic {t}\n\n{printState s}"
-          (s, msg)
+          (s, s!"resolved tactic {t}")
 
 def main : IO Unit := do
   IO.println "Hello"
@@ -42,5 +45,5 @@ def main : IO Unit := do
   let B := P.atom "B"
   let s := initState (emptyList: ListMap Nat P)
       (.imp (.and A B) (.and B A))
-  EchoLine.main_loop apply s (printState s)
+  EchoLine.main_loop apply s prompt
   IO.println "Goodbye!"

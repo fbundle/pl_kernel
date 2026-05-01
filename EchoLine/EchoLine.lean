@@ -3,18 +3,26 @@ namespace EchoLine
 
 universe u
 
-private def IterFunc α := α → String → α × String
+private def Iter α := α → String → Option (α × String)
 
-partial def main_loop (iter: IterFunc α) (state: α) (init: String := "") : IO Unit := do
+partial def main_loop (iter: Iter α) (state: α) (prompt?: Option (α → String) := none) : IO Unit := do
   let stdin ← IO.getStdin
   let stdout ← IO.getStdout
-  stdout.putStrLn init
+  let stderr ← IO.getStderr
+
+  let prompt: α → String := match prompt? with
+    | none => (λ _ => "")
+    | some p => p
+
+  stderr.putStr (prompt state)
   let line ← stdin.getLine
   if line.isEmpty then
     pure ()
   else
-    let (new_state, output) := iter state line.trimAscii.toString
-    stdout.putStrLn output
-    main_loop iter new_state
+    match iter state line.trimAscii.toString with
+      | none => pure ()
+      | some (new_state, output) =>
+        stdout.putStrLn output
+        main_loop iter new_state prompt
 
 end EchoLine
