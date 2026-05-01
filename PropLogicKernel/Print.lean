@@ -9,8 +9,6 @@ def toStringProp (p: P): String :=
     | .or this that => s!"({toStringProp this} ∨ {toStringProp that})"
     | .imp this that => s!"({toStringProp this} → {toStringProp that})"
 
-instance: ToString P where
-  toString := toStringProp
 
 def printProp (p: P) (parent: Option P := none): String :=
   let precedence (p: Option P): Nat :=
@@ -39,6 +37,9 @@ def printProp (p: P) (parent: Option P := none): String :=
     | .or this that => addOptionalParens s!"{printProp this p} ∨ {printProp that p}"
     | .imp this that => addOptionalParens s!"{printProp this p} → {printProp that p}"
 
+
+instance: ToString P where
+  toString := printProp
 
 #eval (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
 #eval printProp (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
