@@ -120,8 +120,13 @@ def resolveTacticMany? [Map α Nat P] (s: S α) (ts: List T): Except String (S �
           Except.error msg
         | Except.ok s =>
           dbg_trace s!"applied tactic {t}"
-          dbg_trace s!"head goal {s.stack.head?}"
 
+          let msg :=
+            match s.stack with
+              | [] => "no more goal"
+              | g :: _ => s!"goal {g.goal}"
+
+          dbg_trace msg
           resolveTacticMany? s ts
 
 
