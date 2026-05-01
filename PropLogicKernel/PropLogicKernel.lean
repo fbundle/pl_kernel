@@ -16,29 +16,29 @@ def toString (p: P): String :=
 
 
 
-inductive T where
+inductive T (α: Type) where
   -- if goal is P → Q
   -- add assumption h: P and change goal to Q
-  | intro: T
+  | intro: T α
   -- if goal is Q and h: P → Q
   -- change to to P
-  | apply (h: String): T
+  | apply (h: α): T α
   -- if goal is P and h: P
   -- done
-  | exact (h: String): T
+  | exact (h: α): T α
   -- if goal is P ∧ Q
   -- split into two goals P and Q
-  | constructor: T
+  | constructor: T α
   -- if h: P ∨ Q
   -- split into two subproblems (assume h₁: P) and (assume h₂: Q)
   -- if h: P ∧ Q
   -- add (h₁: P) and (h₂: Q)
   -- if h: False
   -- done ex falso quodlibet (from False, anything follows)
-  | cases (h: String): T
+  | cases (h: α): T α
   -- if goal is P ∨ Q
   -- change goal to P
-  | left: T
+  | left: T α
   -- if goal is P ∨ Q
   -- change goal to Q
-  | right: T
+  | right: T α
