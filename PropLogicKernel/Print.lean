@@ -1,18 +1,18 @@
 import PropLogicKernel.Basic
 
-def toString (p: P): String :=
+def toStringProp (p: P): String :=
   match p with
     | .false => "False"
     | .atom name => name
-    | .not this => s!"¬ {toString this}"
-    | .and this that => s!"({toString this} ∧ {toString that})"
-    | .or this that => s!"({toString this} ∨ {toString that})"
-    | .imp this that => s!"({toString this} → {toString that})"
+    | .not this => s!"¬ {toStringProp this}"
+    | .and this that => s!"({toStringProp this} ∧ {toStringProp that})"
+    | .or this that => s!"({toStringProp this} ∨ {toStringProp that})"
+    | .imp this that => s!"({toStringProp this} → {toStringProp that})"
 
 instance: ToString P where
-  toString := toString
+  toString := toStringProp
 
-def print (p: P) (parent: Option P := none): String :=
+def printProp (p: P) (parent: Option P := none): String :=
   let precedence (p: Option P): Nat :=
     match p with
       | none => 999
@@ -34,11 +34,24 @@ def print (p: P) (parent: Option P := none): String :=
   match p with
     | .false => "False"
     | .atom name => name
-    | .not this => s!"¬ {print this p}"
-    | .and this that => addOptionalParens s!"{print this p} ∧ {print that p}"
-    | .or this that => addOptionalParens s!"{print this p} ∨ {print that p}"
-    | .imp this that => addOptionalParens s!"{print this p} → {print that p}"
+    | .not this => s!"¬ {printProp this p}"
+    | .and this that => addOptionalParens s!"{printProp this p} ∧ {printProp that p}"
+    | .or this that => addOptionalParens s!"{printProp this p} ∨ {printProp that p}"
+    | .imp this that => addOptionalParens s!"{printProp this p} → {printProp that p}"
 
 
 #eval (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
-#eval print (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
+#eval printProp (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
+
+def toStringTactic (t: T): String :=
+  match t with
+    | .intro => "INTRO"
+    | .apply h => s!"APPLY {h}"
+    | .exact h => s!"EXACT {h}"
+    | .constructor => "CONSTRUCTOR"
+    | .cases h => s!"CASES {h}"
+    | .left => s!"LEFT"
+    | .right => s!"RIGHT"
+
+instance: ToString T where
+  toString := toStringTactic

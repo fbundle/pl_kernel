@@ -24,3 +24,5 @@ instance[BEq α]: Map (ListMap α β) α β  where
   get? := get?
   set := set
   iter := iter
+
+def emptyList [BEq α]: ListMap α β := []

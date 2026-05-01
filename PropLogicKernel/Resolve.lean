@@ -109,3 +109,30 @@ def resolveTactic? [Map α Nat P] (s: S α) (t: T): Except String (S α) :=
       match resolveTacticToGoal? s.count g t with
         | Except.error msg => Except.error msg
         | Except.ok (newCount, newGoals) => Except.ok { count := newCount, stack := newGoals ++ remainingGoals}
+
+def resolveTacticMany? [Map α Nat P] (s: S α) (ts: List T): Except String (S α) :=
+  match ts with
+    | [] => Except.ok s
+    | t :: ts =>
+      match resolveTactic? s t with
+        | Except.error msg =>
+          dbg_trace msg
+          Except.error msg
+        | Except.ok s =>
+          dbg_trace s!"applied tactic {t}"
+          dbg_trace s!"head goal {s.stack.head?}"
+
+          resolveTacticMany? s ts
+
+
+def test: Nat :=
+
+
+
+
+
+
+
+
+
+  0

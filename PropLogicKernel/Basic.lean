@@ -49,6 +49,9 @@ structure S (α: Type) [Map α Nat P] where
   count: Nat
   stack: List (G α)
 
+def initState [Map α Nat P] (emptyList: α) (p: P) : S α :=
+  {count := 0, stack := [{hyp := emptyList, goal := p}]}
+
 
 
 def hello := "world"
