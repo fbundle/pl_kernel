@@ -127,7 +127,7 @@ def resolveTacticMany? [Map α Nat P] (s: S α) (ts: List T): Except String (S �
               dbg_trace s!"resolved {t}\n"
               resolveTacticMany? s ts
 
-def test: Nat :=
+def test : Unit → Nat :=
   let A := P.atom "A"
   let B := P.atom "B"
 
@@ -149,7 +149,7 @@ def test: Nat :=
       0
     | _ => 0
 
+  (λ _ => 0)
 
-  0
 
-#eval test
+-- #eval test
