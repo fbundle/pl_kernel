@@ -6,5 +6,5 @@ defaultTargets = ["prop-logic-kernel"]
 name = "PropLogicKernel"
 
 [[lean_exe]]
-name = "prop-logic-kernel"
+name = "Main.lean"
 root = "Main"
