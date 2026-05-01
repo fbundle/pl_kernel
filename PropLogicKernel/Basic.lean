@@ -30,6 +30,7 @@ inductive T where
   -- add (h₁: A) and (h₂: B)
   -- if h: False
   -- done ex falso quodlibet (from False, anything follows)
+  -- cases doesn't resolve implication
   | cases (h: Nat): T
   -- if goal is A ∨ B
   -- change goal to A

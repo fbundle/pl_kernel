@@ -67,6 +67,7 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
     -- add (h₁: A) and (h₂: B)
     -- if h: False
     -- done ex falso quodlibet (from False, anything follows)
+    -- cases doesn't resolve implication
     | (_, .cases _, some (.or A B)) =>
       Except.ok (count + 2, [
         {
