@@ -1,3 +1,5 @@
+import PropLogicKernel.ListMap
+
 
 abbrev Name := String
 
@@ -42,24 +44,19 @@ inductive T where
   -- change goal to Q
   | right: T
 
--- hash map
-class Ctx (α: Type) where
-  get (key: Key): Option P
-  set (m: α) (key: Key) (prop: P): α
-  iter: List (Key × P)
 
 -- hypothesis
-structure H (α: Type) [Ctx α] where
+structure H (α: Type) [Map α Key P] where
   parent: Option (H α)
   terms: α
 
 
 -- problem
-structure G (α: Type) [Ctx α] where
+structure G (α: Type) [Map α Key P] where
   hypothesis: H α
   goal: P
 
-abbrev  State α [Ctx α] := List (G α)
+abbrev  State α [Map α Key P] := List (G α)
 
-def applyTactic? {α} [Ctx α] (stack: State α) (t: T): Except String (State α) :=
+def applyTactic? {α} [Map α Key P] (stack: State α) (t: T): Except String (State α) :=
   sorry
