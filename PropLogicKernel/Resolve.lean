@@ -111,50 +111,39 @@ def resolveTactic? [Map α Nat P] (s: S α) (t: T): Except String (S α) :=
         | Except.ok (newCount, newGoals) => Except.ok { count := newCount, stack := newGoals ++ remainingGoals}
 
 def resolveTacticMany? [Map α Nat P] (s: S α) (ts: List T): Except String (S α) :=
-
-  match (s.stack, ts) with
-    | ([], []) =>
-      dbg_trace "no more goal"
+  match s.stack with
+    | [] =>
       Except.ok s
-
-    | ([], _) =>
-      dbg_trace "no more goal, non empty tactic"
-      Except.error "no more goal, non empty tactic"
-
-    | (g :: _, []) =>
-      dbg_trace s!"current goal {g}"
-
-    | g :: _ => s!"goal {g.goal}"
-
-
-
-  match ts with
-    | [] => Except.ok s
-    | t :: ts =>
-      match resolveTactic? s t with
-        | Except.error msg =>
-          dbg_trace msg
-          Except.error msg
-        | Except.ok s =>
-          dbg_trace s!"applied tactic {t}"
-
-          let msg :=
-            match s.stack with
-              | [] => "no more goal"
-              | g :: _ => s!"goal {g.goal}"
-
-          dbg_trace msg
-          resolveTacticMany? s ts
-
+    | g :: _ =>
+      dbg_trace s!"current goal\n {g}"
+      match ts with
+        | [] =>
+          Except.error "empty tactic"
+        | t :: ts =>
+          match resolveTactic? s t with
+            | Except.error msg => Except.error msg
+            | Except.ok s =>
+              dbg_trace s!"resolved tactic {t}"
+              resolveTacticMany? s ts
 
 def test: Nat :=
+  let A := P.atom "A"
+
+  let s := initState (emptyList: ListMap Nat P) (.imp A A)
+
+  let ts: List T := [
+    T.intro,
+    T.exact 0,
+  ]
 
 
-
-
-
-
-
+  let _ := match resolveTacticMany? s ts with
+    | Except.error msg =>
+      dbg_trace msg
+      0
+    | _ => 0
 
 
   0
+
+#eval test
