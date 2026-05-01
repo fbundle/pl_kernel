@@ -39,12 +39,29 @@ def apply (s: State) (line: String): Option (State × String) :=
         | Except.ok s =>
           (s, s!"resolved tactic {t}")
 
+
+def andMany (ps: List P) (last: P): P :=
+  match ps with
+    | [] => last
+    | p :: [] => (.and p last)
+    | p :: ps => (.and p (andMany ps last))
+
+def impMany (ps: List P) (last: P): P :=
+  match ps with
+    | [] => last
+    | p :: [] => (.imp p last)
+    | p :: ps => (.imp p (impMany ps last))
+
+
 def main : IO Unit := do
   IO.println "Hello"
   let A := P.atom "A"
   let B := P.atom "B"
+  let C := P.atom "C"
+  let D := P.atom "D"
   let s := initState (emptyList: ListMap Nat P)
       -- (.imp (.and A B) (.and B A))
-      (.imp (.and (.imp A B) (.imp B .fals)) (.imp A .fals))
+      -- (.imp (.and (.imp A B) (.imp B .fals)) (.imp A .fals))
+      (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
   EchoLine.main_loop apply s prompt
   IO.println "Goodbye!"
