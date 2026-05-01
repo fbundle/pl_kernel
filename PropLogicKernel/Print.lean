@@ -55,3 +55,13 @@ def toStringTactic (t: T): String :=
 
 instance: ToString T where
   toString := toStringTactic
+
+def toStringGoal [Map α Nat P] (g: G α): String :=
+  let lines := (Map.iter g.hyp).map ((λ ((n, p): Nat × P) =>
+    s!"{n}: {p}"
+  ): (Nat × P) → String)
+  let lines := lines ++ [s!"⊢ {g.goal}"]
+  String.intercalate "\n" lines
+
+instance [Map α Nat P]: ToString (G α)  where
+  toString := toStringGoal

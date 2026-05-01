@@ -111,6 +111,23 @@ def resolveTactic? [Map α Nat P] (s: S α) (t: T): Except String (S α) :=
         | Except.ok (newCount, newGoals) => Except.ok { count := newCount, stack := newGoals ++ remainingGoals}
 
 def resolveTacticMany? [Map α Nat P] (s: S α) (ts: List T): Except String (S α) :=
+
+  match (s.stack, ts) with
+    | ([], []) =>
+      dbg_trace "no more goal"
+      Except.ok s
+
+    | ([], _) =>
+      dbg_trace "no more goal, non empty tactic"
+      Except.error "no more goal, non empty tactic"
+
+    | (g :: _, []) =>
+      dbg_trace s!"current goal {g}"
+
+    | g :: _ => s!"goal {g.goal}"
+
+
+
   match ts with
     | [] => Except.ok s
     | t :: ts =>
