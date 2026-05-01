@@ -1,0 +1,15 @@
+
+[project]
+name = "prop-logic-kernel"
+dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+]
+
+[tool.hatch.version]
+path = "prop_logic_kernel/__init__.py"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
