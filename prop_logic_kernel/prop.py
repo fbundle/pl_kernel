@@ -27,7 +27,7 @@ class Imp(Prop):
 class Fals(Prop):
     ...
 
-def _Prop_priority(t: Prop | None) -> int:
+def _prop_precedence(t: Prop | None) -> int:
     if t is None:
         return 999
     # Imp Or And Not
@@ -55,17 +55,17 @@ def to_string(t: Prop, parent: Prop | None = None) -> str:
         return f"¬{to_string(t.this, parent=t)}"
     elif isinstance(t, And):
         s = f"{to_string(t.left, parent=t)} ∧ {to_string(t.right, parent=t)}"
-        if _Prop_priority(parent) <= _Prop_priority(t):
+        if _prop_precedence(parent) <= _prop_precedence(t):
             s = f"({s})"
         return s
     elif isinstance(t, Or):
         s = f"{to_string(t.left, parent=t)} ∨ {to_string(t.right, parent=t)}"
-        if _Prop_priority(parent) <= _Prop_priority(t):
+        if _prop_precedence(parent) <= _prop_precedence(t):
             s = f"({s})"
         return s
     elif isinstance(t, Imp):
         s = f"{to_string(t.left, parent=t)} → {to_string(t.right, parent=t)}"
-        if _Prop_priority(parent) <= _Prop_priority(t):
+        if _prop_precedence(parent) <= _prop_precedence(t):
             s = f"({s})"
         return s
     elif isinstance(t, Fals):
