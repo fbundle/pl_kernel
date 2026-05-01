@@ -1,4 +1,5 @@
 
+-- proposition
 inductive P where
   | false: P
   | not (this: P): P
@@ -15,30 +16,54 @@ def toString (p: P): String :=
     | .imp this that => s!"({toString this} → {toString that})"
 
 
+abbrev Name := Nat
 
-inductive T (α: Type) where
+-- tactic
+inductive T where
   -- if goal is P → Q
   -- add assumption h: P and change goal to Q
-  | intro: T α
+  | intro: T
   -- if goal is Q and h: P → Q
   -- change to to P
-  | apply (h: α): T α
+  | apply (h: Name): T
   -- if goal is P and h: P
   -- done
-  | exact (h: α): T α
+  | exact (h: Name): T
   -- if goal is P ∧ Q
   -- split into two goals P and Q
-  | constructor: T α
+  | constructor: T
   -- if h: P ∨ Q
   -- split into two subproblems (assume h₁: P) and (assume h₂: Q)
   -- if h: P ∧ Q
   -- add (h₁: P) and (h₂: Q)
   -- if h: False
   -- done ex falso quodlibet (from False, anything follows)
-  | cases (h: α): T α
+  | cases (h: Name): T
   -- if goal is P ∨ Q
   -- change goal to P
-  | left: T α
+  | left: T
   -- if goal is P ∨ Q
   -- change goal to Q
-  | right: T α
+  | right: T
+
+-- hash map
+class Ctx (α: Type) where
+  get (name: Name): Option P
+  set (m: α) (name: Name) (prop: P): α
+  size: Nat
+
+-- hypothesis
+structure H (α: Type) [Ctx α] where
+  parent: Option (H α)
+  terms: α
+
+
+-- problem
+structure G (α: Type) [Ctx α] where
+  hypothesis: H α
+  goal: P
+
+abbrev  State α [Ctx α] := List (G α)
+
+def apply_tactic {α} [Ctx α] (stack: State α) (t: T): State α :=
+  sorry
