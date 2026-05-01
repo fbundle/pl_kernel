@@ -1,3 +1,1 @@
-# PROPOSITIONAL LOGIC KERNEL
-
-simple propositional logic kernel
+# prop-logic-kernel
