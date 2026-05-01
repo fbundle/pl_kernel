@@ -23,7 +23,7 @@ abbrev State := S (ListMap Nat P)
 def printState (s: State): String :=
   match s.stack with
     | [] => "no_more_goal"
-    | g :: _ => s!"current_goal\n{g}\n"
+    | g :: _ => s!"current_goal (1 / {s.stack.length})\n{g}"
 
 def apply (s: State) (line: String): State × String :=
   let t?: Option T := parseTactic? line.trimAscii.toString

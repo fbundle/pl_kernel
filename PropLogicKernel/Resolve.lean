@@ -100,7 +100,7 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
         hyp := g.hyp,
         goal := B,
       }])
-    | _ => Except.error s!"cannot resolve tactic"
+    | _ => Except.error s!"cannot resolve tactic {t}"
 
 def resolveTactic? [Map α Nat P] (s: S α) (t: T): Except String (S α) :=
   match s.stack with
