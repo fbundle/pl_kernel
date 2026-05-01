@@ -1,4 +1,4 @@
-import PropLogicKernel.PropLogicKernel
+import PropLogicKernel.Basic
 
 def toString (p: P): String :=
   match p with
@@ -9,6 +9,8 @@ def toString (p: P): String :=
     | .or this that => s!"({toString this} ∨ {toString that})"
     | .imp this that => s!"({toString this} → {toString that})"
 
+instance: ToString P where
+  toString := toString
 
 def print (p: P) (parent: Option P := none): String :=
   let precedence (p: Option P): Nat :=
@@ -38,5 +40,5 @@ def print (p: P) (parent: Option P := none): String :=
     | .imp this that => addOptionalParens s!"{print this p} → {print that p}"
 
 
-#eval toString (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
+#eval (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
 #eval print (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
