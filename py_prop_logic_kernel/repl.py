@@ -92,12 +92,12 @@ class Repl:
         self._last = ReplStep(out=out, err=err, prompt=self._prompt_str)
         return self._last
 
-    def finish(self, *, timeout_s: float = 2.0) -> int:
+    def finish(self, *, timeout_s: float = 2.0) -> Optional[int]:
         """
         Gracefully finish the REPL by closing stdin (EOF) and waiting.
 
-        Returns exit_code. In this repo's Lean REPL, EOF returns the previous
-        step's `code` (0 iff the goal stack is empty).
+        Returns graceful exit code when graceful EOF shutdown succeeds.
+        Returns None if graceful shutdown timed out and forceful fallback was used.
         """
         if self._p is None:
             raise ReplError("process not started; call start() first")
@@ -118,12 +118,12 @@ class Repl:
             try:
                 p.terminate()
                 try:
-                    code2 = p.wait(timeout=1.0)
-                    return int(code2)
+                    p.wait(timeout=1.0)
+                    return None
                 except subprocess.TimeoutExpired:
                     p.kill()
-                    code3 = p.wait(timeout=1.0)
-                    return int(code3)
+                    p.wait(timeout=1.0)
+                    return None
             finally:
                 self._p = None
         finally:
