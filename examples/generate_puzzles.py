@@ -117,7 +117,12 @@ def main() -> None:
         )
         return
 
-    configs = [(nv, d) for nv in range(min_vars, max_vars + 1) for d in range(min_depth, max_depth + 1)]
+    # Schedule work from smallest depth -> largest depth (then num_vars),
+    # so the job order is deterministic even under parallelism.
+    configs = sorted(
+        ((nv, d) for d in range(min_depth, max_depth + 1) for nv in range(min_vars, max_vars + 1)),
+        key=lambda x: (x[1], x[0]),
+    )
     kernel_exe_s = str(kernel_exe) if kernel_exe is not None else None
     work = [(str(out_dir), nv, d, examples_per_config, kernel_exe_s) for (nv, d) in configs]
 
@@ -129,7 +134,8 @@ def main() -> None:
         return
 
     with Pool(processes=jobs) as pool:
-        for nv, d in tqdm(pool.imap_unordered(_worker_generate_one, work), total=len(work), desc="configs"):
+        # Use `imap` (ordered) so results are yielded in the same (depth-sorted) order.
+        for nv, d in tqdm(pool.imap(_worker_generate_one, work), total=len(work), desc="configs"):
             # keep a little human-readable trace alongside tqdm
             print(f"done num_vars={nv} depth={d}")
 
