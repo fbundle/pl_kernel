@@ -41,8 +41,7 @@ inductive T where
   -- if goal is A ∨ B
   -- change goal to B
   | right: T
-  -- sorry
-  | sorr: T
+
   -- if h: A ∨ B
   -- split into two subproblems (assume h₁: A) and (assume h₂: B)
   -- if h: A ∧ B
@@ -52,14 +51,20 @@ inductive T where
   -- cases doesn't resolve implication
   | cases (h: Nat): T
 
-  -- classical logic
-
+  -- CLASSICAL LOGIC
   -- law of excluded middle
   -- add (A → False) ∨ A
   | lem (p: P): T
   -- if goal is B and h: A1 → B1
   -- split into two goals A1 and (B1 → B)
   | refine (h: Nat): T
+
+  -- APPLICATION LEVEL
+  -- sorry - just sorry
+  | sorr: T
+  -- add a goal into the current state
+  | new (p: P): T
+
 
 -- goal
 structure G (α: Type) [Map α Nat P] where

@@ -83,10 +83,6 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
         goal := B,
       }])
 
-    -- sorry
-    | (_, .sorr, _) =>
-      Except.ok (count, [])
-
     -- if h: A ∨ B
     -- split into two subproblems (assume h₁: A) and (assume h₂: B)
     -- if h: A ∧ B
@@ -113,6 +109,8 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
     | (_, .cases _, some (.fals)) =>
       Except.ok (count, [])
 
+    -- CLASSICAL LOGIC
+
     -- law of excluded middle
     -- add (A → False) ∨ A
     | (_, .lem A, _) =>
@@ -137,6 +135,19 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
         }])
       else
         Except.error s!"refine is only available in classical logic"
+
+    -- APPLICATION LEVEL
+
+    -- sorry
+    | (_, .sorr, _) =>
+      Except.ok (count, [])
+
+    -- add a goal into the current state
+    | (_, .new C, _) =>
+      Except.ok (count, [g, {
+        hyp := (Map.empty Nat P: α),
+        goal := C,
+      }])
 
     | _ => Except.error s!"cannot resolve tactic {t}"
 

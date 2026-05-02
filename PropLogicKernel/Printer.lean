@@ -64,10 +64,11 @@ def toStringTactic (t: T): String :=
     | .constructor => "constructor"
     | .left => "left"
     | .right => "right"
-    | .sorr => "sorry"
     | .cases h => s!"cases {h}"
     | .lem p => s!"lem {p}"
     | .refine h => s!"refine {h}"
+    | .sorr => "sorry"
+    | .new p => s!"new {p}"
 
 instance: ToString T where
   toString := toStringTactic

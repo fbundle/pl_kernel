@@ -1,6 +1,7 @@
 namespace PropLogicKernel.ListMap
 
 class Map (ζ: Type u) (α: Type v) (β: Type w) [BEq α] where
+  empty : ζ
   get? (z: ζ) (key: α): Option β
   set (z: ζ) (key: α) (val: β): ζ
   iter (z: ζ): List (α × β)
@@ -21,12 +22,12 @@ def set [BEq α] (map: ListMap α β) (key: α) (val: β): ListMap α β :=
 
 def iter [BEq α] (map: ListMap α β) := map
 
+def empty [BEq α]: ListMap α β := []
+
 instance[BEq α]: Map (ListMap α β) α β  where
+  empty := empty
   get? := get?
   set := set
   iter := iter
-
-def emptyList [BEq α]: ListMap α β := []
-
 
 end PropLogicKernel.ListMap

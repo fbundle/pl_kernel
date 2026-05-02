@@ -64,9 +64,32 @@ mutual
 end
 
 /-- Parse a proposition; returns the remainder string (after skipping trailing whitespace). -/
-def parseProp? (s : String) : Option (P × String) :=
+def parseProp? (s : String) : Option P :=
   match parseImp (skipWs s.toList) with
   | none => none
-  | some (p, cs) => some (p, String.ofList (skipWs cs))
+  | some (p, _) => some p
+
+def parseTactic? (s: String): Option T :=
+  match s.trimAscii.toString with
+  | "intro" => some T.intro
+  | "constructor" => some T.constructor
+  | "left" => some T.left
+  | "right" => some T.right
+  | "sorry" => some T.sorr
+  | _ =>
+    if s.startsWith "apply " then
+      (s.drop 6).toString |> String.toNat? |>.map T.apply
+    else if s.startsWith "exact " then
+      (s.drop 6).toString |> String.toNat? |>.map T.exact
+    else if s.startsWith "cases " then
+      (s.drop 6).toString |> String.toNat? |>.map T.cases
+    else if s.startsWith "lem " then
+      parseProp? ((s.drop 4).toString) |>.map T.lem
+    else if s.startsWith "refine " then
+      (s.drop 7).toString |> String.toNat? |>.map T.refine
+    else if s.startsWith "new " then
+      parseProp? ((s.drop 4).toString) |>.map T.new
+    else
+      none
 
 end PropLogicKernel.Parser
