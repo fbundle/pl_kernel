@@ -5,6 +5,7 @@ namespace PropLogicKernel.Print
 open PropLogicKernel.Basic
 open PropLogicKernel.ListMap
 
+/--
 def toStringProp (p: P): String :=
   match p with
     | .fals => "⊥"
@@ -13,8 +14,9 @@ def toStringProp (p: P): String :=
     | .or this that => s!"({toStringProp this} ∨ {toStringProp that})"
     | .imp this that => s!"({toStringProp this} → {toStringProp that})"
 
+--/
 
-def printProp (p: P) (parent: Option P := none) (strict: Bool := False): String :=
+def toStringProp (p: P) (parent: Option P := none) (strict: Bool := False): String :=
   let precedence (p: Option P): Nat :=
     match p with
       | none => 999
@@ -43,16 +45,16 @@ def printProp (p: P) (parent: Option P := none) (strict: Bool := False): String 
   match p with
     | .fals => "⊥"
     | .atom name => name
-    | .and this that => addOptionalParens s!"{printProp this p true} ∧ {printProp that p false}"
-    | .or this that => addOptionalParens s!"{printProp this p true} ∨ {printProp that p false}"
-    | .imp this that => addOptionalParens s!"{printProp this p true} → {printProp that p false}"
+    | .and this that => addOptionalParens s!"{toStringProp this p true} ∧ {toStringProp that p false}"
+    | .or this that => addOptionalParens s!"{toStringProp this p true} ∨ {toStringProp that p false}"
+    | .imp this that => addOptionalParens s!"{toStringProp this p true} → {toStringProp that p false}"
 
 
 instance: ToString P where
-  toString := printProp
+  toString := toStringProp
 
 #eval (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
-#eval printProp (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
+#eval toStringProp (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
 
 def toStringTactic (t: T): String :=
   match t with
