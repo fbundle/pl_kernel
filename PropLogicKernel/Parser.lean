@@ -4,6 +4,11 @@ namespace PropLogicKernel.Parser
 
 open PropLogicKernel.Basic
 
+/--
+the code below was written by cursor
+--/
+
+
 private def skipWs (cs : List Char) : List Char :=
   cs.dropWhile (·.isWhitespace)
 
