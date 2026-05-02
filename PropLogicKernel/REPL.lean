@@ -13,14 +13,14 @@ open PropLogicKernel.Resolver
 abbrev State := S (ListMap Nat P)
 
 def init: (State × String) := (
-  {count := 0, stack := []}, "type `new <goal>` to add new goal\n> "
+  {count := 0, stack := []}, "type `new <goal>` to add new goal"
 )
 
 def REPL (classical_logic: Bool) (state: State) (inputLine: String): (State × String) :=
   let prompt (s: State): String :=
     match s.stack with
-      | [] => "all goals accomplished!\n> "
-      | g :: _ => s!"current goals (1 / {s.stack.length})\n{g}\n> "
+      | [] => "-- all goals accomplished!"
+      | g :: _ => s!"-- current goals (1 / {s.stack.length})\n{g}"
 
   let inputLine := inputLine.trimAscii.toString
 
@@ -28,7 +28,7 @@ def REPL (classical_logic: Bool) (state: State) (inputLine: String): (State × S
     (state, "> ")
   else
     match parseTactic? inputLine with
-      | none => (state, "parser error\n> ")
+      | none => (state, "-- parser error")
       | some tactic =>
         match resolveTactic? state tactic classical_logic with
           | Except.error msg => (state, msg)
