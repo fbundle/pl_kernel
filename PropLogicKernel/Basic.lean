@@ -66,7 +66,7 @@ structure G (α: Type) [Map α Nat P] where
   hyp: α
   goal: P
 
--- state - a list of goals to solve
+-- state
 structure S (α: Type) [Map α Nat P] where
   count: Nat
   stack: List (G α)
