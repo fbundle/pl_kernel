@@ -16,22 +16,18 @@ open PropLogicKernel.Printer
 
 abbrev State := S (ListMap Nat P)
 
-structure AppState where
-  state: State
-  sorryCount: Nat
-  newCount: Nat
-
-def getCode (s: AppState): UInt32 :=
-  if s.state.stack.isEmpty ∧ (s.sorryCount == 0) ∧ (s.newCount ≥ 1) then
+def getCode (s: State): UInt32 :=
+  if s.stack.isEmpty ∧ (s.sorrCount == 0) ∧ (s.newCount ≥ 1) then
     0
   else
     1
 
-def init: REPL.Step AppState :=
+def init: REPL.Step State :=
   let s := {
-    state := {count := 0, stack := []},
-    sorryCount := 0,
+    varCount := 0,
+    sorrCount := 0,
     newCount := 0,
+    stack := []
   }
   {
     state := s,
@@ -40,8 +36,8 @@ def init: REPL.Step AppState :=
     out := [],
   }
 
-def getPrompt (s: AppState): REPL.Step AppState :=
-  match s.state.stack with
+def getPrompt (s: State): REPL.Step State :=
+  match s.stack with
     | [] =>
       {
         state := s,
@@ -55,11 +51,11 @@ def getPrompt (s: AppState): REPL.Step AppState :=
       {
         state := s,
         code := getCode s,
-        err := [s!"goals remaining {s.state.stack.length}"],
+        err := [s!"goals remaining {s.stack.length}"],
         out := lines,
       }
 
-def trans (classical_logic: Bool) (s: AppState) (inputLine: String): REPL.Step AppState :=
+def trans (classical_logic: Bool) (s: State) (inputLine: String): REPL.Step State :=
   let inputLine := inputLine.trimAscii.toString
 
   if inputLine.length == 0 then
@@ -79,14 +75,7 @@ def trans (classical_logic: Bool) (s: AppState) (inputLine: String): REPL.Step A
           out := [],
         }
       | some tactic =>
-        let newSorryCount := s.sorryCount + match tactic with
-          | .sorr => 1
-          | _ => 0
-        let newNewCount := s.newCount + match tactic with
-          | .new _ => 1
-          | _ => 0
-
-        match resolveTactic? s.state tactic classical_logic with
+        match resolveTactic? s tactic classical_logic with
           | Except.error msg =>
             {
               state := s,
@@ -94,10 +83,6 @@ def trans (classical_logic: Bool) (s: AppState) (inputLine: String): REPL.Step A
               err := [msg],
               out := [],
             }
-          | Except.ok newS => getPrompt {
-            state := newS,
-            sorryCount:= newSorryCount,
-            newCount := newNewCount,
-          }
+          | Except.ok newS => getPrompt newS
 
 end PropLogicKernel.REPL

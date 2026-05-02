@@ -73,7 +73,9 @@ structure G (α: Type) [Map α Nat P] where
 
 -- state
 structure S (α: Type) [Map α Nat P] where
-  count: Nat
+  varCount: Nat
+  sorrCount: Nat
+  newCount: Nat
   stack: List (G α)
 
 end PropLogicKernel.Basic
