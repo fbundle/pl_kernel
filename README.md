@@ -103,7 +103,5 @@ Then the next step repeats forever.
 The following files were written by Cursor AI:
 
 - `README.md`
-- `py_prop_logic_kernel/__init__.py`
-- `py_prop_logic_kernel/client.py`
-- `py_prop_logic_kernel/repl.py`
+- All Python code in this repo (for example: `py_prop_logic_kernel/`)
 - `PropLogicKernel/Parser.lean`

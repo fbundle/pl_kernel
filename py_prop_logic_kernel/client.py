@@ -189,6 +189,13 @@ class Client:
         self._repl.close()
         self._repl = None
 
+    def __enter__(self) -> "Client":
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
+
     def last(self) -> Step:
         if self._last is None:
             self.start()
