@@ -48,6 +48,13 @@ def s0: State := {
   stack := [],
 }
 
+-- A ∧ B → B ∧ A
+-- (.imp (.and A B) (.and B A))
+-- (A → B) ∧ (B → ⊥) → A → ⊥
+-- (.imp (.and (.imp A B) (.imp B .fals)) (.imp A .fals))
+-- A → (A → B) → (A → C) → (B ∨ C → D) → D
+-- (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
+
 def p0: String := "type `new <goal>` to add new goal\n> "
 -- def p0: String := prompt s0
 
@@ -80,18 +87,5 @@ def impMany (ps: List P) (last: P): P :=
 
 
 def main : IO UInt32 := do
-  IO.println "Hello"
-  let A := P.atom "A"
-  let B := P.atom "B"
-  let C := P.atom "C"
-  let D := P.atom "D"
-  let s: State := s0 -- initState (emptyList: ListMap Nat P)
-      -- A ∧ B → B ∧ A
-      -- (.imp (.and A B) (.and B A))
-      -- (A → B) ∧ (B → ⊥) → A → ⊥
-      -- (.imp (.and (.imp A B) (.imp B .fals)) (.imp A .fals))
-      -- A → (A → B) → (A → C) → (B ∨ C → D) → D
-      -- (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
-  EchoLine.loop stateTransition s (prompt s)
-  IO.println "Goodbye!"
+  EchoLine.loop stateTransition s0 p0
   return 0
