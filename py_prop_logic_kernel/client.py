@@ -133,6 +133,7 @@ class Step:
     new_count: Optional[int]
     sorry_count: Optional[int]
     goals_remaining: Optional[int]
+    all_goals_accomplished: bool
 
 
 class Client:
@@ -223,6 +224,7 @@ class Client:
                 new_count=current_new_count,
                 sorry_count=current_sorry_count,
                 goals_remaining=current_goals,
+                all_goals_accomplished=self._last.all_goals_accomplished if self._last is not None else False,
             )
             return self._last
 
@@ -241,6 +243,7 @@ class Client:
                 new_count=current_new_count,
                 sorry_count=current_sorry_count,
                 goals_remaining=current_goals,
+                all_goals_accomplished=self._last.all_goals_accomplished if self._last is not None else False,
             )
             return self._last
         return self.send(line)
@@ -253,12 +256,13 @@ class Client:
         self.finish()
 
     def _to_step(self, out: str, err: str) -> Step:
+        all_goals_accomplished = _ALL_DONE_RE.search(err) is not None
         m = _GOALS_RE.search(err)
         if m:
             new_count: Optional[int] = int(m.group(1))
             sorry_count: Optional[int] = int(m.group(2))
             goals = int(m.group(3))
-        elif _ALL_DONE_RE.search(err):
+        elif all_goals_accomplished:
             new_count = self._last.new_count if self._last is not None else None
             sorry_count = self._last.sorry_count if self._last is not None else None
             goals = 0
@@ -266,5 +270,12 @@ class Client:
             new_count = None
             sorry_count = None
             goals = None
-        return Step(out=out, err=err, new_count=new_count, sorry_count=sorry_count, goals_remaining=goals)
+        return Step(
+            out=out,
+            err=err,
+            new_count=new_count,
+            sorry_count=sorry_count,
+            goals_remaining=goals,
+            all_goals_accomplished=all_goals_accomplished,
+        )
 

@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
+_ALL_DONE_MARKER = "all goals accomplished!"
+
 
 @dataclass(frozen=True, slots=True)
 class Puzzle:
@@ -24,7 +26,7 @@ class Puzzle:
         Run this puzzle against the kernel binary using stdin (no REPL wrapper).
 
         Returns:
-        - True: kernel exits with code 0
+        - True: kernel exits with code 0 and stderr contains `all goals accomplished!`
         - False: kernel exits with nonzero code
         - None: failed to run (missing binary, timeout, or OS error)
         """
@@ -47,5 +49,6 @@ class Puzzle:
         except (OSError, subprocess.TimeoutExpired):
             return None
 
-        return proc.returncode == 0
+        err_text = proc.stderr.decode("utf-8", errors="replace")
+        return (proc.returncode == 0) and (_ALL_DONE_MARKER in err_text)
 
