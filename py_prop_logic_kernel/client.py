@@ -9,7 +9,7 @@ from .repl import Repl
 
 
 _GOALS_RE = re.compile(
-    r"^\s*--\s*new_count\s+\d+\s+sorry_count\s+\d+\s+goals_remaining\s+(\d+)\s*$",
+    r"^\s*--\s*new_count\s+(\d+)\s+sorry_count\s+(\d+)\s+goals_remaining\s+(\d+)\s*$",
     re.IGNORECASE | re.MULTILINE,
 )
 _ALL_DONE_RE = re.compile(r"^\s*--\s*all\s+goals\s+accomplished!\s*$", re.IGNORECASE | re.MULTILINE)
@@ -130,6 +130,8 @@ def _tactic_is_valid_strict(line: str) -> tuple[bool, str]:
 class Step:
     out: str
     err: str
+    new_count: Optional[int]
+    sorry_count: Optional[int]
     goals_remaining: Optional[int]
 
 
@@ -212,8 +214,16 @@ class Client:
 
         ok, msg = _tactic_is_valid_strict(line)
         if not ok:
+            current_new_count = self._last.new_count if self._last is not None else None
+            current_sorry_count = self._last.sorry_count if self._last is not None else None
             current_goals = self._last.goals_remaining if self._last is not None else None
-            self._last = Step(out="", err=f"python parse error: {msg}", goals_remaining=current_goals)
+            self._last = Step(
+                out="",
+                err=f"python parse error: {msg}",
+                new_count=current_new_count,
+                sorry_count=current_sorry_count,
+                goals_remaining=current_goals,
+            )
             return self._last
 
         repl_step = self._repl.step(line)
@@ -222,10 +232,14 @@ class Client:
 
     def send_honest(self, line: str) -> Step:
         if _is_forbidden_honest_tactic(line):
+            current_new_count = self._last.new_count if self._last is not None else None
+            current_sorry_count = self._last.sorry_count if self._last is not None else None
             current_goals = self._last.goals_remaining if self._last is not None else None
             self._last = Step(
                 out="",
                 err="honesty policy: `new` and `sorry` are not allowed in send_honest",
+                new_count=current_new_count,
+                sorry_count=current_sorry_count,
                 goals_remaining=current_goals,
             )
             return self._last
@@ -241,10 +255,16 @@ class Client:
     def _to_step(self, out: str, err: str) -> Step:
         m = _GOALS_RE.search(err)
         if m:
-            goals = int(m.group(1))
+            new_count: Optional[int] = int(m.group(1))
+            sorry_count: Optional[int] = int(m.group(2))
+            goals = int(m.group(3))
         elif _ALL_DONE_RE.search(err):
+            new_count = self._last.new_count if self._last is not None else None
+            sorry_count = self._last.sorry_count if self._last is not None else None
             goals = 0
         else:
+            new_count = None
+            sorry_count = None
             goals = None
-        return Step(out=out, err=err, goals_remaining=goals)
+        return Step(out=out, err=err, new_count=new_count, sorry_count=sorry_count, goals_remaining=goals)
 
