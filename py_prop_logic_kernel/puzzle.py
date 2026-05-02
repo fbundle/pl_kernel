@@ -21,7 +21,7 @@ class Puzzle:
     proof: Sequence[str]
     settings: Mapping[str, object] | None = None
 
-    def check(self, kernel_path: str | Path) -> Optional[bool]:
+    def check(self, kernel_path: str | Path = ".lake/build/bin/Main-lean") -> Optional[bool]:
         """
         Run this puzzle against the kernel binary using stdin (no REPL wrapper).
 
