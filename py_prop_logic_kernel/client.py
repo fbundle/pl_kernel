@@ -11,6 +11,11 @@ from .repl import Repl
 _GOALS_RE = re.compile(r"^\s*--\s*goals\s+remaining\s+(\d+)\s*$", re.IGNORECASE | re.MULTILINE)
 
 
+def _is_forbidden_honest_tactic(line: str) -> bool:
+    s = line.strip().lower()
+    return ("sorry" in s) or ("new" in s)
+
+
 @dataclass(frozen=True)
 class Step:
     out: str
@@ -45,6 +50,20 @@ class Client:
             "- Hypotheses are numbered in the rendered output (for example `0: A`).\n"
             "- Status lines are on stderr (for example `-- goals remaining 2`), goals on stdout.\n"
             "- This package ships Python only; build the Lean binary locally with `lake build`.\n"
+            "- Tactic semantics:\n"
+            "  - `intro`: if goal is `A → B`, add fresh hypothesis `A` and change goal to `B`.\n"
+            "  - `apply n`: if hypothesis `n` is `A → B` and current goal is `B`, change goal to `A`.\n"
+            "  - `exact n`: if hypothesis `n` exactly matches the current goal `A`, solve the goal.\n"
+            "  - `constructor`: if goal is `A ∧ B`, split into two goals `A` and `B`.\n"
+            "  - `left`: if goal is `A ∨ B`, change goal to `A`.\n"
+            "  - `right`: if goal is `A ∨ B`, change goal to `B`.\n"
+            "  - `cases n`: if hypothesis `n` is `A ∨ B`, branch into two goals; if `A ∧ B`, add both parts;\n"
+            "    if `⊥`, solve the goal immediately.\n"
+            "  - `lem P`: in classical mode only, add hypothesis `(P → ⊥) ∨ P`.\n"
+            "  - `refine n`: in classical mode only, if hypothesis `n` is `A → B1` and goal is `B`,\n"
+            "    produce goals `B1 → B` and `A`.\n"
+            "  - `sorry`: solve the current goal unconditionally.\n"
+            "  - `new P`: push a fresh goal `P` onto the goal stack.\n"
         )
 
     def start(self) -> "Client":
@@ -75,6 +94,11 @@ class Client:
         repl_step = self._repl.send(line)
         self._last = self._to_step(repl_step.out, repl_step.err)
         return self._last
+
+    def send_honest(self, line: str) -> Step:
+        if _is_forbidden_honest_tactic(line):
+            raise ValueError("send_honest does not allow `new` or `sorry`")
+        return self.send(line)
 
     def _to_step(self, out: str, err: str) -> Step:
         m = _GOALS_RE.search(err)
