@@ -24,6 +24,12 @@ inductive T where
   -- if goal is A ∧ B
   -- split into two goals A and B
   | constructor: T
+  -- if goal is A ∨ B
+  -- change goal to A
+  | left: T
+  -- if goal is A ∨ B
+  -- change goal to B
+  | right: T
   -- if h: A ∨ B
   -- split into two subproblems (assume h₁: A) and (assume h₂: B)
   -- if h: A ∧ B
@@ -32,12 +38,7 @@ inductive T where
   -- done ex falso quodlibet (from False, anything follows)
   -- cases doesn't resolve implication
   | cases (h: Nat): T
-  -- if goal is A ∨ B
-  -- change goal to A
-  | left: T
-  -- if goal is A ∨ B
-  -- change goal to B
-  | right: T
+
 
 -- goal
 structure G (α: Type) [Map α Nat P] where

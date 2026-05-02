@@ -1,28 +1,22 @@
 
 namespace EchoLine
 
-universe u
+def StateTransition α := α → String → (α × String × Bool)
 
-private def Iter α := α → String → Option (α × String)
-
-partial def main_loop (iter: Iter α) (state: α) (prompt?: Option (α → String) := none) : IO Unit := do
-  let stdin ← IO.getStdin
-  let stdout ← IO.getStdout
-  let stderr ← IO.getStderr
-
-  let prompt: α → String := match prompt? with
-    | none => (λ _ => "")
-    | some p => p
-
-  stderr.putStr (prompt state)
-  let line ← stdin.getLine
-  if line.isEmpty then
+partial def loop (t: StateTransition α) (state: α) (prompt: String) (alive: Bool): IO Unit := do
+  if ¬ alive then
     pure ()
   else
-    match iter state line.trimAscii.toString with
-      | none => pure ()
-      | some (new_state, output) =>
-        stdout.putStrLn output
-        main_loop iter new_state prompt
+    let stdin ← IO.getStdin
+    let stdout ← IO.getStdout
+
+    stdout.putStr prompt
+
+    let line ← stdin.getLine
+    if line.isEmpty then
+      loop t state "" true  -- no op
+    else
+      let (newState, newPrompt, alive) := t state line
+      loop t newState newPrompt alive
 
 end EchoLine

@@ -17,10 +17,25 @@ def parseTactic? (s: String): Option T :=
     else
       none
 
+def State := S (ListMap Nat P)
 
-abbrev State := S (ListMap Nat P)
+def s0: State := {
+  count := 0,
+  stack := [],
+}
 
-def isDone (s: State): Bool := s.stack.length == 0
+def p0: String := "type `new <goal>` to add new goal\n> "
+
+def stateTransition (state: State) (inputLine: String): (State × String × Bool) :=
+
+
+
+  sorry
+
+
+
+
+
 
 def prompt (s: State): String :=
   match s.stack with
@@ -53,7 +68,7 @@ def impMany (ps: List P) (last: P): P :=
     | p :: ps => (.imp p (impMany ps last))
 
 
-def main : IO Unit := do
+def main : IO UInt32 := do
   IO.println "Hello"
   let A := P.atom "A"
   let B := P.atom "B"
@@ -65,3 +80,4 @@ def main : IO Unit := do
       -- (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
   EchoLine.main_loop apply s prompt
   IO.println "Goodbye!"
+  return 0

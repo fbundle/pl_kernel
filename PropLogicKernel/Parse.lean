@@ -1,2 +1,2 @@
-def parse (s: String): Except String (P × String) :=
+def parseProp? (s: String): Option (P × String) :=
   sorry
