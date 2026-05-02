@@ -9,11 +9,117 @@ from .repl import Repl
 
 
 _GOALS_RE = re.compile(r"^\s*--\s*goals\s+remaining\s+(\d+)\s*$", re.IGNORECASE | re.MULTILINE)
+_INT_RE = re.compile(r"^[0-9]+$")
 
 
 def _is_forbidden_honest_tactic(line: str) -> bool:
     s = line.strip().lower()
     return ("sorry" in s) or ("new" in s)
+
+
+class _PropParseError(ValueError):
+    pass
+
+
+def _skip_ws(s: str, i: int) -> int:
+    n = len(s)
+    while i < n and s[i].isspace():
+        i += 1
+    return i
+
+
+def _parse_unary(s: str, i: int) -> int:
+    i = _skip_ws(s, i)
+    if i >= len(s):
+        raise _PropParseError("unexpected end of input")
+    ch = s[i]
+    if ch == "⊥":
+        return i + 1
+    if ch == "(":
+        j = _parse_imp(s, i + 1)
+        j = _skip_ws(s, j)
+        if j >= len(s) or s[j] != ")":
+            raise _PropParseError("missing ')'")
+        return j + 1
+    if ch.isalpha():
+        j = i + 1
+        while j < len(s) and s[j].isalpha():
+            j += 1
+        return j
+    raise _PropParseError(f"unexpected character {ch!r}")
+
+
+def _parse_and(s: str, i: int) -> int:
+    i = _parse_unary(s, i)
+    i = _skip_ws(s, i)
+    if i < len(s) and s[i] == "∧":
+        return _parse_and(s, i + 1)  # right-assoc, matching Lean parser
+    return i
+
+
+def _parse_or(s: str, i: int) -> int:
+    i = _parse_and(s, i)
+    i = _skip_ws(s, i)
+    if i < len(s) and s[i] == "∨":
+        return _parse_or(s, i + 1)  # right-assoc
+    return i
+
+
+def _parse_imp(s: str, i: int) -> int:
+    i = _parse_or(s, i)
+    i = _skip_ws(s, i)
+    if i < len(s) and s[i] == "→":
+        return _parse_imp(s, i + 1)  # right-assoc
+    return i
+
+
+def _prop_is_valid_strict(prop: str) -> tuple[bool, str]:
+    """
+    Strictly validate proposition syntax (must consume full input).
+    Mirrors the Lean parser behavior but rejects trailing garbage.
+    """
+    try:
+        j = _parse_imp(prop, 0)
+        j = _skip_ws(prop, j)
+        if j != len(prop):
+            return False, f"trailing input at position {j}"
+        return True, ""
+    except _PropParseError as e:
+        return False, str(e)
+
+
+def _tactic_is_valid_strict(line: str) -> tuple[bool, str]:
+    """
+    Validate tactic surface syntax in Python before sending to Lean.
+    This only checks shape, not whether it applies to the current goal.
+    """
+    s = line.strip()
+    if s == "":
+        return True, ""
+    if s in {"intro", "constructor", "left", "right", "sorry"}:
+        return True, ""
+
+    def one_nat(prefix: str) -> tuple[bool, str]:
+        if not s.startswith(prefix):
+            return False, ""
+        rest = s[len(prefix) :].strip()
+        if rest == "" or not _INT_RE.match(rest):
+            return False, f"expected Nat after {prefix.strip()!r}"
+        return True, ""
+
+    for pref in ("apply ", "exact ", "cases ", "refine "):
+        ok, msg = one_nat(pref)
+        if ok or msg:
+            return ok, msg
+
+    if s.startswith("new "):
+        ok, msg = _prop_is_valid_strict(s[4:].strip())
+        return (ok, msg if ok else f"invalid proposition for `new`: {msg}")
+    if s.startswith("lem "):
+        ok, msg = _prop_is_valid_strict(s[4:].strip())
+        return (ok, msg if ok else f"invalid proposition for `lem`: {msg}")
+
+    return False, "unknown tactic"
 
 
 @dataclass(frozen=True)
@@ -90,6 +196,12 @@ class Client:
         return self._last
 
     def send(self, line: str) -> Step:
+        ok, msg = _tactic_is_valid_strict(line)
+        if not ok:
+            current_goals = self._last.goals_remaining if self._last is not None else None
+            self._last = Step(out="", err=f"python parse error: {msg}", goals_remaining=current_goals)
+            return self._last
+
         self.start()
         assert self._repl is not None
         repl_step = self._repl.send(line)
@@ -98,7 +210,6 @@ class Client:
 
     def send_honest(self, line: str) -> Step:
         if _is_forbidden_honest_tactic(line):
-            self.start()
             current_goals = self._last.goals_remaining if self._last is not None else None
             self._last = Step(
                 out="",

@@ -3,7 +3,6 @@
 This repo contains:
 
 - `Main.lean`: a tiny proposition-logic tactic kernel wrapped in a `REPL.run` loop
-- `py_repl/`: a small Python package that can drive any `REPL.run`-based binary via stdin/stdout/stderr
 - `py_prop_logic_kernel/`: the Python package you publish; it parses the kernel output into structured steps such as `goals_remaining`
 
 ## Lean code spec
@@ -89,6 +88,7 @@ Then the next step repeats forever.
 - `py_prop_logic_kernel.Client`:
   - starts `.lake/build/bin/Main-lean`
   - sends lines to the REPL
+  - validates tactic surface syntax in Python before sending (including strict proposition parsing for `new` and `lem`)
   - parses stderr for `-- goals remaining N`
   - returns structured `Step(out, err, goals_remaining)`
 - `Client.send(line)`:
@@ -106,6 +106,4 @@ The following files were written by Cursor AI:
 - `py_prop_logic_kernel/__init__.py`
 - `py_prop_logic_kernel/client.py`
 - `py_prop_logic_kernel/repl.py`
-- `py_repl/__init__.py`
-- `py_repl/repl.py`
 - `PropLogicKernel/Parser.lean`
