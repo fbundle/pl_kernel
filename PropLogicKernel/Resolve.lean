@@ -11,7 +11,7 @@ open PropLogicKernel.ListMap
 -- resolveTacticToGoal?
 -- apply tactic, return a new list of goals
 -- and a new count variable
-def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical : Bool := False): Except String (Nat × List (G α)) :=
+def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical : Bool): Except String (Nat × List (G α)) :=
   -- get h? if specified
   let h?: Option P :=
     let hName?: Option Nat :=
@@ -135,56 +135,12 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
 
     | _ => Except.error s!"cannot resolve tactic {t}"
 
-def resolveTactic? [Map α Nat P] (s: S α) (t: T): Except String (S α) :=
+def resolveTactic? [Map α Nat P] (s: S α) (t: T) (classical : Bool := False): Except String (S α) :=
   match s.stack with
     | [] => Except.error "empty list of goals"
     | g :: remainingGoals =>
-      match resolveTacticToGoal? s.count g t with
+      match resolveTacticToGoal? s.count g t classical with
         | Except.error msg => Except.error msg
         | Except.ok (newCount, newGoals) => Except.ok { count := newCount, stack := newGoals ++ remainingGoals}
-
-def resolveTacticMany? [Map α Nat P] (s: S α) (ts: List T): Except String (S α) :=
-  match s.stack with
-    | [] =>
-      dbg_trace s!"\nno_more_goal\n"
-      Except.ok s
-    | g :: _ =>
-      dbg_trace s!"\nhead_proof_state\n{g}"
-      match ts with
-        | [] =>
-          Except.error "empty tactic"
-        | t :: ts =>
-          match resolveTactic? s t with
-            | Except.error msg => Except.error msg
-            | Except.ok s =>
-              dbg_trace s!"resolved {t}\n"
-              resolveTacticMany? s ts
-
-def test : Unit → Nat :=
-  let A := P.atom "A"
-  let B := P.atom "B"
-
-  let s := initState (emptyList: ListMap Nat P)
-    (.imp (.and A B) (.and B A))
-
-  let ts: List T := [
-    T.intro,
-    T.cases 0,
-    T.constructor,
-    T.exact 2,
-    T.exact 1,
-  ]
-
-
-  let _ := match resolveTacticMany? s ts with
-    | Except.error msg =>
-      dbg_trace msg
-      0
-    | _ => 0
-
-  (λ _ => 0)
-
-
--- #eval test
 
 end PropLogicKernel.Resolve

@@ -50,6 +50,8 @@ def s0: State := {
   stack := [],
 }
 
+def classical: Bool := True
+
 -- A ∧ B → B ∧ A
 -- (.imp (.and A B) (.and B A))
 -- (A → B) ∧ (B → ⊥) → A → ⊥
@@ -57,7 +59,7 @@ def s0: State := {
 -- A → (A → B) → (A → C) → (B ∨ C → D) → D
 -- (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
 
--- ((P → ⊥) → ⊥) → P
+-- ((P → ⊥) → ⊥) → P -- need classical logic
 def p0: String := "type `new <goal>` to add new goal\n> "
 -- def p0: String := prompt s0
 
@@ -72,7 +74,7 @@ def stateTransition (state: State) (inputLine: String): (State × String) :=
       (newState, "new goal added\n" ++ (prompt newState))
 
     | some (Sum.inl t) =>
-      match resolveTactic? state t with
+      match resolveTactic? state t classical with
         | Except.error msg => (state, msg ++ "\n> ")
         | Except.ok newState => (newState, prompt newState)
 
