@@ -44,6 +44,15 @@ class Repl:
 
         self._p: Optional[subprocess.Popen[bytes]] = None
         self._last: Optional[ReplStep] = None
+        self._graceful_exit_code: Optional[int] = None
+
+    def graceful_exit_code(self) -> Optional[int]:
+        """
+        Exit code from the last *graceful* shutdown, if any.
+
+        If `finish()` had to terminate/kill due to timeout, this stays `None`.
+        """
+        return self._graceful_exit_code
 
     def start(self) -> ReplStep:
         """
@@ -52,6 +61,7 @@ class Repl:
         if self._p is not None:
             raise ReplError("process already started")
 
+        self._graceful_exit_code = None
         self._p = subprocess.Popen(
             self._argv,
             cwd=self._cwd,
@@ -101,7 +111,8 @@ class Repl:
         p = self._p
         try:
             code = p.wait(timeout=float(timeout_s))
-            return int(code)
+            self._graceful_exit_code = int(code)
+            return self._graceful_exit_code
         except subprocess.TimeoutExpired:
             # Fallback: forceful shutdown if graceful EOF doesn't exit in time.
             try:
