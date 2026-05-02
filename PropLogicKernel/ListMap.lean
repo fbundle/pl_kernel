@@ -1,6 +1,5 @@
 namespace PropLogicKernel.ListMap
 
-
 class Map (ζ: Type u) (α: Type v) (β: Type w) [BEq α] where
   get? (z: ζ) (key: α): Option β
   set (z: ζ) (key: α) (val: β): ζ

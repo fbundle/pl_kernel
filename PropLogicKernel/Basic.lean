@@ -4,6 +4,14 @@ namespace PropLogicKernel.Basic
 
 open PropLogicKernel.ListMap
 
+/--
+basic data structures
+Prop
+Goal  -- a proposition and hypotheses
+State --  a list of goals to solve
+Tactic -- a rule to change state
+--/
+
 -- proposition
 inductive P where
   | fals: P
@@ -53,8 +61,6 @@ inductive T where
   -- split into two goals A1 and (B1 → B)
   | refine (h: Nat): T
 
-
-
 -- goal
 structure G (α: Type) [Map α Nat P] where
   hyp: α
@@ -64,10 +70,5 @@ structure G (α: Type) [Map α Nat P] where
 structure S (α: Type) [Map α Nat P] where
   count: Nat
   stack: List (G α)
-
-def initState [Map α Nat P] (emptyList: α) (p: P) : S α :=
-  {count := 0, stack := [{hyp := emptyList, goal := p}]}
-
-
 
 end PropLogicKernel.Basic
