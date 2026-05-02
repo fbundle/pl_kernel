@@ -154,9 +154,9 @@ Otherwise exit code is `1`.
 Parse/resolution errors do not automatically force exit code `1`; they preserve the previous state. So if the kernel is already in a success state, a later failing command can still leave final exit code `0`.
 
 
-## AI-generated code disclaimer
+## DISCLAIMER: AI GENERATED CODE
 
-The following files were written by Cursor AI:
+The following files were written by Cursor:
 
 - `README.md`
 - All Python code in this repo (for example: `py_prop_logic_kernel/`)
