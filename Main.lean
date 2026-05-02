@@ -23,6 +23,8 @@ def parseTactic? (s: String): Option T :=
       (s.drop 6).toString |> String.toNat? |>.map T.exact
     else if s.startsWith "cases " then
       (s.drop 6).toString |> String.toNat? |>.map T.cases
+    else if s.startsWith "lem " then
+      parseProp? ((s.drop 4).toString) |>.map (λ (p, _) => T.lem p)
     else
       none
 
@@ -55,6 +57,7 @@ def s0: State := {
 -- A → (A → B) → (A → C) → (B ∨ C → D) → D
 -- (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
 
+-- (P → ⊥) → ⊥ → P
 def p0: String := "type `new <goal>` to add new goal\n> "
 -- def p0: String := prompt s0
 
