@@ -14,4 +14,3 @@ def main : IO UInt32 := do
   let repl := PropLogicKernel.REPL.trans classical_logic
 
   REPL.run repl init
-  return 0

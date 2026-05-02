@@ -16,17 +16,24 @@ open PropLogicKernel.Printer
 
 abbrev State := S (ListMap Nat P)
 
+def getCode (s: State): UInt32 :=
+  if s.stack.isEmpty then 0 else 1
+
 def init: REPL.Step State :=
+  let s := {count := 0, stack := []}
   {
-    state := {count := 0, stack := []},
+    state := s,
+    code := getCode s,
     err := ["type `new <goal>` to add new goal"],
     out := [],
   }
+
 def getPrompt (s: State): REPL.Step State :=
   match s.stack with
     | [] =>
       {
         state := s,
+        code := getCode s,
         err := ["all goals accomplished!"],
         out := [],
       }
@@ -35,6 +42,7 @@ def getPrompt (s: State): REPL.Step State :=
       let lines := (goal :: hyp).reverse
       {
         state := s,
+        code := getCode s,
         err := [s!"goals remaining {s.stack.length}"],
         out := lines,
       }
@@ -45,6 +53,7 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
   if inputLine.length == 0 then
     {
         state := state,
+        code := getCode state,
         err := [],
         out := [],
     }
@@ -53,6 +62,7 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
       | none =>
         {
           state := state,
+          code := getCode state,
           err := ["parse error"],
           out := [],
         }
@@ -61,6 +71,7 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
           | Except.error msg =>
             {
               state := state,
+              code := getCode state,
               err := [msg],
               out := [],
             }
