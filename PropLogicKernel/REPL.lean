@@ -25,8 +25,6 @@ def getCode (s: State): UInt32 :=
   else
     1
 
-
-
 def getPrompt (s: State): REPL.Step State :=
   match s.stack with
     | [] =>
@@ -54,6 +52,7 @@ def getPrompt (s: State): REPL.Step State :=
         ],
         out := lines,
       }
+
 def init: REPL.Step State :=
   getPrompt {
     varCount := 0,
@@ -61,6 +60,7 @@ def init: REPL.Step State :=
     newCount := 0,
     stack := []
   }
+
 def trans (classical_logic: Bool) (s: State) (inputLine: String): REPL.Step State :=
   let inputLine := inputLine.trimAscii.toString
 
