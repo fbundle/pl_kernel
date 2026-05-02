@@ -31,7 +31,7 @@ def REPL (classical_logic: Bool) (state: State) (inputLine: String): (State × S
       | none => (state, "-- parser error")
       | some tactic =>
         match resolveTactic? state tactic classical_logic with
-          | Except.error msg => (state, msg)
+          | Except.error msg => (state, "-- " ++ msg)
           | Except.ok newState => (newState, prompt newState)
 
 end PropLogicKernel.REPL
