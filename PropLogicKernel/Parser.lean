@@ -12,6 +12,12 @@ the code below was written by cursor
 private def skipWs (cs : List Char) : List Char :=
   cs.dropWhile (·.isWhitespace)
 
+private def isAtomChar (c : Char) : Bool :=
+  c.isUpper || c.isDigit || c == '_'
+
+private def isAllowedPropChar (c : Char) : Bool :=
+  c.isWhitespace || c == '(' || c == ')' || c == '∧' || c == '∨' || c == '→' || c == '⊥' || isAtomChar c
+
 mutual
   /-- Right-associative: `A → B → C` parses as `A → (B → C)`. -/
   partial def parseImp (cs : List Char) : Option (P × List Char) := do
@@ -55,9 +61,9 @@ mutual
       | ')' :: cs => some (p, cs)
       | _ => none
     | c :: rest =>
-      if c.isAlpha then
+      if isAtomChar c then
         let all := c :: rest
-        let idChars := all.takeWhile (·.isAlpha)
+        let idChars := all.takeWhile isAtomChar
         some (P.atom (String.ofList idChars), all.drop idChars.length)
       else
         none
@@ -65,7 +71,9 @@ end
 
 /-- Parse a proposition; returns the remainder string (after skipping trailing whitespace). -/
 def parseProp? (s : String) : Option P :=
-  let s := s.toUpper -- make sure the proposition is in uppercase
+  if !(s.toList.all isAllowedPropChar) then
+    none
+  else
   match parseImp (skipWs s.toList) with
   | none => none
   | some (p, _) => some p
