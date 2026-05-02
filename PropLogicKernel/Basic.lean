@@ -44,6 +44,11 @@ inductive T where
   -- cases doesn't resolve implication
   | cases (h: Nat): T
 
+  -- law of excluded middle
+  -- add (A → False) ∨ A
+  | lem (p: P): T
+
+
 
 -- goal
 structure G (α: Type) [Map α Nat P] where

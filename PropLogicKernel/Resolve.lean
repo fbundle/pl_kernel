@@ -111,6 +111,14 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
     | (_, .cases _, some (.fals)) =>
       Except.ok (count, [])
 
+    -- law of excluded middle
+    -- add (A → False) ∨ A
+    | (_, .lem A, _) =>
+      Except.ok (count + 1, [{
+        hyp := (Map.set g.hyp count (P.or (.imp A .fals) A)),
+        goal := g.goal,
+      }])
+
     | _ => Except.error s!"cannot resolve tactic {t}"
 
 def resolveTactic? [Map α Nat P] (s: S α) (t: T): Except String (S α) :=

@@ -64,6 +64,7 @@ def toStringTactic (t: T): String :=
     | .right => "right"
     | .sorr => "sorry"
     | .cases h => s!"cases {h}"
+    | .lem p => s!"lem {p}"
 
 instance: ToString T where
   toString := toStringTactic
