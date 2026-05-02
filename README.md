@@ -1,133 +1,158 @@
-# prop-logic-kernel
+# PROP-LOGIC-KERNEL
 
-This repo contains:
+This project is a small proposition-logic tactic kernel in Lean, exposed through a line-based REPL.
 
-- `Main.lean`: a tiny proposition-logic tactic kernel wrapped in a `REPL.run` loop
-- `py_prop_logic_kernel/`: the Python package you publish; it parses the kernel output into structured steps such as `goals_remaining`
-
-## Lean code spec
-
-The Lean kernel is defined primarily by:
+## LEAN MODULE
 
 - `PropLogicKernel/Basic.lean`: proposition syntax, tactics, goals, and state
-- `PropLogicKernel/Parser.lean`: string parser for propositions and tactics
-- `PropLogicKernel/Resolver.lean`: operational semantics for each tactic
-- `PropLogicKernel/REPL.lean`: REPL transition function built on top of the resolver
+- `PropLogicKernel/Parser.lean`: parser for propositions and tactic commands (written by cursor)
+- `PropLogicKernel/Resolver.lean`: operational semantics for tactics
+- `PropLogicKernel/Printer.lean`: rendering of propositions, tactics, and goals
+- `PropLogicKernel/REPL.lean`: REPL-level state, status lines, and exit-code policy
+- `REPL/REPL.lean`: generic line-based REPL loop
 - `Main.lean`: executable entrypoint
 
-### Core data model
+## PROPOSITION SPECIFICATION
 
-- A proposition `P` is one of: `⊥`, atom, conjunction `A ∧ B`, disjunction `A ∨ B`, implication `A → B`.
-- A goal is a pair of:
-  - a hypothesis map from natural-number names to propositions
-  - a target proposition
-- A state is a stack of goals plus a counter used to assign fresh hypothesis names.
+A proposition `P` is one of:
 
-### Tactic resolution rules
+- `⊥`
+- atom
+- `A ∧ B`
+- `A ∨ B`
+- `A → B`
 
-These are the actual rules implemented in `PropLogicKernel/Resolver.lean`.
+Associativity follows the parser/printer implementation:
 
-- `intro`:
-  - If the goal is `A → B`, add a fresh hypothesis `A` and replace the goal with `B`.
-- `apply n`:
-  - If hypothesis `n` is `A → B` and the current goal is `B`, replace the goal with `A`.
-- `exact n`:
-  - If hypothesis `n` is exactly the current goal `A`, solve the goal.
-- `constructor`:
-  - If the goal is `A ∧ B`, split it into two goals: `A` and `B`.
-- `left`:
-  - If the goal is `A ∨ B`, replace it with `A`.
-- `right`:
-  - If the goal is `A ∨ B`, replace it with `B`.
-- `cases n`:
-  - If hypothesis `n` is `A ∨ B`, branch into two goals: one with fresh hypothesis `A`, one with fresh hypothesis `B`.
-  - If hypothesis `n` is `A ∧ B`, add fresh hypotheses `A` and `B` to the current goal.
+- `∧`, `∨`, and `→` are parsed right-associatively
+- parentheses may be used explicitly
+
+## PARSER SPECIFICATION
+
+`PropLogicKernel/Parser.lean` uppercases proposition input before parsing.
+
+After uppercasing, proposition input is rejected unless every character is one of:
+
+- whitespace
+- `(`, `)`
+- `∧`, `∨`, `→`, `⊥`
+- uppercase letters `A-Z`
+- digits `0-9`
+- underscore `_`
+
+Atom names are maximal nonempty strings over:
+
+- uppercase letters `A-Z`
+- digits `0-9`
+- underscore `_`
+
+Examples of valid atom names:
+
+- `A`
+- `P1`
+- `HELLO_WORLD`
+- `X_2`
+
+## GOAL/STATE MODEL
+
+A goal consists of:
+
+- a set of hypotheses
+- a target proposition
+
+The state tracks:
+
+- a list of goals
+- `varCount`
+- `newCount`
+- `sorrCount`
+
+## TACTIC
+
+These are the kernel rules implemented by `PropLogicKernel/Resolver.lean`.
+
+- `intro`
+  - If goal is `A → B`, add a fresh hypothesis `A` and replace the goal with `B`.
+- `apply n`
+  - If hypothesis `n` is `A → B` and current goal is `B`, replace the goal with `A`.
+- `exact n`
+  - If hypothesis `n` exactly matches the current goal, solve the goal.
+- `constructor`
+  - If goal is `A ∧ B`, split it into two goals.
+- `left`
+  - If goal is `A ∨ B`, replace the goal with `A`.
+- `right`
+  - If goal is `A ∨ B`, replace the goal with `B`.
+- `cases n`
+  - If hypothesis `n` is `A ∨ B`, branch into two goals.
+  - If hypothesis `n` is `A ∧ B`, add both parts as fresh hypotheses.
   - If hypothesis `n` is `⊥`, solve the goal immediately.
-- `lem P`:
-  - Available only in classical mode.
-  - Adds a fresh hypothesis `(P → ⊥) ∨ P`.
-- `refine n`:
-  - Available only in classical mode.
-  - If hypothesis `n` is `A1 → B1` and the current goal is `B`, replace the current goal with two goals:
-    - `B1 → B`
-    - `A1`
-- `sorry`:
-  - Solves the current goal unconditionally.
-- `new P`:
-  - Pushes a fresh goal `P` onto the state, with an empty hypothesis map.
 
-### Failure behavior
+### CLASSICAL LOGIC
 
-- If a tactic does not match the current goal or referenced hypothesis shape, resolution fails with an error message.
+- `lem P`
+  - Classical only.
+  - Adds hypothesis `(P → ⊥) ∨ P`.
+- `refine n`
+  - Classical only.
+  - If hypothesis `n` is `A1 → B1` and goal is `B`, replace the current goal with goals `B1 → B` and `A1`.
+
+### APPLICATION LEVEL COMMANDS
+
+- `sorry`
+  - Solves the current goal unconditionally and increments `sorrCount`.
+- `new P`
+  - Pushes a fresh goal `P` and increments `newCount`.
+
+## FAILURE BEHAVIOR
+
+- Parse failures return `parse error`.
+- Resolution failures return an error message and keep the previous state.
 - `lem` and `refine` fail if classical logic is disabled.
 - Any tactic other than `new` fails on an empty goal stack.
 
-### Proposition parser constraints
+## REPL protocol
 
-`PropLogicKernel/Parser.lean` normalizes proposition input to uppercase and rejects any character outside this set:
+The executable built by `lake build` runs `REPL.run` from `REPL/REPL.lean`.
 
-- whitespace
-- parentheses: `(`, `)`
-- operators/constants: `∧`, `∨`, `→`, `⊥`
-- atom characters: uppercase letters `A-Z`, digits `0-9`, underscore `_`
+For each step:
 
-## REPL protocol spec (`REPL.run`)
+- write zero or more status/error lines to `stderr`
+- write zero or more output lines to `stdout`
+- write the prompt `> ` to `stderr` with no trailing newline
+- read exactly one newline-terminated line from `stdin`
+- transition to the next state
 
-The executable produced by `lake build` (see `.lake/build/bin/Main-lean`) implements a simple line-based protocol driven by `REPL.run` in `REPL/REPL.lean`.
+Status lines are prefixed by `-- `.
 
-Each **step**:
+Typical status line:
 
-- **stderr (error/status stream)**: write zero or more lines of status/errors.
-  - In this repo, status lines are prefixed with `-- ` and include counters, for example:
-    - `-- new_count 1 sorry_count 0 goals_remaining 2`
-    - `-- all goals accomplished!` (emitted only when success conditions are met)
-- **stdout (output stream)**: write zero or more lines of “main output” (e.g. the rendered goal state).
-- **stderr (prompt)**: write the prompt string (default `> `) **without** a trailing newline.
-- **stdin (input)**: read exactly one line (newline-terminated). That line is passed to the transition function.
+- `-- new_count 1 sorry_count 0 goals_remaining 2`
 
-Then the next step repeats forever.
+Success marker:
 
-### Exit code policy
+- `-- all goals accomplished!`
 
-At EOF (`stdin.getLine` returns empty), `REPL.run` returns the previous step's `code`.
+That success marker is emitted iff:
 
-In this repo, `PropLogicKernel/REPL.lean` sets `code = 0` iff all of the following hold:
+- at least one goal was successfully introduced via `new`
+- no `sorry` was used
+- all goals are solved
 
-- `newCount ≥ 1` (at least one goal was successfully introduced via `new`)
-- `sorrCount = 0` (no `sorry` was used)
-- goal stack is empty (all goals solved)
+## EXIT CODE POLICY
 
-Otherwise `code = 1`.
+At EOF, `REPL.run` returns the previous step's `code`.
 
-Important nuance: parse/resolve errors do not directly force code `1`; they keep the previous state. So if all goals were already solved and a later command fails, final code can still be `0`.
+`PropLogicKernel/REPL.lean` sets exit code `0` iff (same with `all goals accomplished!`):
 
-### Notes for clients
+- at least one goal was successfully introduced via `new`
+- no `sorry` was used
+- all goals are solved
 
-- **Do not** assume stdout and stderr are synchronized; a robust client should read both streams until it observes the prompt on stderr.
-- **Flush matters**: `REPL/REPL.lean` flushes stdout/stderr after writes so subprocess-driven clients do not hang on buffered output.
+Otherwise exit code is `1`.
 
-## Python package spec
+Parse/resolution errors do not automatically force exit code `1`; they preserve the previous state. So if the kernel is already in a success state, a later failing command can still leave final exit code `0`.
 
-`py_prop_logic_kernel` is a Python-only wrapper around the built Lean binary.
-
-- `py_prop_logic_kernel.Client`:
-  - starts `.lake/build/bin/Main-lean`
-  - sends lines to the REPL
-  - validates tactic surface syntax in Python before sending (including strict proposition parsing for `new` and `lem`)
-  - parses stderr status lines like `-- new_count N sorry_count M goals_remaining K`
-  - returns structured `Step(out, err, new_count, sorry_count, goals_remaining, all_goals_accomplished)`
-- `Client.send(line)`:
-  - sends any supported REPL command, including `new` and `sorry`
-- `Client.send_honest(line)`:
-  - like `send`, but if `new` or `sorry` appears in the input line, it does not send the command and returns a `Step` with the policy message in `err`
-- `Client.finish()`:
-  - closes stdin (EOF), allowing the Lean process to return its final `code`
-  - returns graceful exit code (`int`) when graceful shutdown succeeds, else `None` on timeout fallback
-- `py_prop_logic_kernel.Puzzle.check(kernel_path)`:
-  - runs the kernel binary directly from stdin (without the REPL wrapper)
-  - returns `True` only if exit code is `0` **and** stderr contains `all goals accomplished!`
-- `Client.init_prompt()`:
-  - returns a human/AI-oriented summary of usage and tactic semantics
 
 ## AI-generated code disclaimer
 
