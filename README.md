@@ -69,12 +69,28 @@ The executable produced by `lake build` (see `.lake/build/bin/Main-lean`) implem
 Each **step**:
 
 - **stderr (error/status stream)**: write zero or more lines of status/errors.
-  - In this repo, status lines are typically prefixed with `-- ` (e.g. `-- goals remaining 2`).
+  - In this repo, status lines are prefixed with `-- ` and include counters, for example:
+    - `-- new_count 1 sorry_count 0 goals_remaining 2`
+    - `-- all goals accomplished!`
 - **stdout (output stream)**: write zero or more lines of “main output” (e.g. the rendered goal state).
 - **stderr (prompt)**: write the prompt string (default `> `) **without** a trailing newline.
 - **stdin (input)**: read exactly one line (newline-terminated). That line is passed to the transition function.
 
 Then the next step repeats forever.
+
+### Exit code policy
+
+At EOF (`stdin.getLine` returns empty), `REPL.run` returns the previous step's `code`.
+
+In this repo, `PropLogicKernel/REPL.lean` sets `code = 0` iff all of the following hold:
+
+- `newCount ≥ 1` (at least one goal was successfully introduced via `new`)
+- `sorrCount = 0` (no `sorry` was used)
+- goal stack is empty (all goals solved)
+
+Otherwise `code = 1`.
+
+Important nuance: parse/resolve errors do not directly force code `1`; they keep the previous state. So if all goals were already solved and a later command fails, final code can still be `0`.
 
 ### Notes for clients
 
@@ -89,12 +105,15 @@ Then the next step repeats forever.
   - starts `.lake/build/bin/Main-lean`
   - sends lines to the REPL
   - validates tactic surface syntax in Python before sending (including strict proposition parsing for `new` and `lem`)
-  - parses stderr for `-- goals remaining N`
-  - returns structured `Step(out, err, goals_remaining)`
+  - parses stderr status lines like `-- new_count N sorry_count M goals_remaining K`
+  - returns structured `Step(out, err, new_count, sorry_count, goals_remaining)`
 - `Client.send(line)`:
   - sends any supported REPL command, including `new` and `sorry`
 - `Client.send_honest(line)`:
   - like `send`, but if `new` or `sorry` appears in the input line, it does not send the command and returns a `Step` with the policy message in `err`
+- `Client.finish()`:
+  - closes stdin (EOF), allowing the Lean process to return its final `code`
+  - returns graceful exit code (`int`) when graceful shutdown succeeds, else `None` on timeout fallback
 - `Client.init_prompt()`:
   - returns a human/AI-oriented summary of usage and tactic semantics
 

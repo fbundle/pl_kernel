@@ -16,8 +16,11 @@ open PropLogicKernel.Printer
 
 abbrev State := S (ListMap Nat P)
 
+def isAllGoalsAccomplished (s: State): Bool :=
+  s.stack.isEmpty ∧ (s.sorrCount == 0) ∧ (s.newCount ≥ 1)
+
 def getCode (s: State): UInt32 :=
-  if s.stack.isEmpty ∧ (s.sorrCount == 0) ∧ (s.newCount ≥ 1) then
+  if isAllGoalsAccomplished s then
     0
   else
     1
@@ -39,13 +42,17 @@ def init: REPL.Step State :=
 def getPrompt (s: State): REPL.Step State :=
   match s.stack with
     | [] =>
+      let allGoalsAccomplished: List String :=
+        if isAllGoalsAccomplished s then
+          ["all goals accomplished!"]
+        else
+          []
       {
         state := s,
         code := getCode s,
         err := [
           s!"new_count {s.newCount} sorry_count {s.sorrCount} goals_remaining {s.stack.length}",
-          "all goals accomplished!",
-        ],
+        ] ++ allGoalsAccomplished,
         out := [],
       }
     | g :: _ =>
