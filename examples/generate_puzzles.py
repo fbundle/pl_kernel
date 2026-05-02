@@ -13,7 +13,7 @@ def _repo_root() -> Path:
 sys.path.insert(0, str(_repo_root()))
 
 from py_prop_logic_kernel.generate import GenerateSettings, generate_puzzle  # noqa: E402
-from py_prop_logic_kernel.puzzle import Puzzle  # noqa: E402
+from py_prop_logic_kernel.puzzle import Client, Puzzle  # noqa: E402
 
 
 def _write_puzzle_file(path: Path, puzzle: Puzzle) -> None:
@@ -24,16 +24,24 @@ def _write_puzzle_file(path: Path, puzzle: Puzzle) -> None:
 def _write_examples(out_config_dir: Path, *, num_vars: int, depth: int, n: int, kernel_exe: Path | None) -> None:
     out_config_dir.mkdir(parents=True, exist_ok=True)
 
-    for i in range(n):
-        seed = num_vars * 1_000_000 + depth * 1_000 + i
-        puzzle = generate_puzzle(GenerateSettings(num_vars=num_vars, depth=depth, seed=seed))
-        out_path = out_config_dir / f"{i + 1:04d}.txt"
-        _write_puzzle_file(out_path, puzzle)
+    with Client(exe=kernel_exe) if kernel_exe is not None else _NullCtx() as c:
+        for i in range(n):
+            seed = num_vars * 1_000_000 + depth * 1_000 + i
+            puzzle = generate_puzzle(GenerateSettings(num_vars=num_vars, depth=depth, seed=seed))
+            out_path = out_config_dir / f"{i + 1:04d}.txt"
+            _write_puzzle_file(out_path, puzzle)
 
-        if kernel_exe is not None:
-            ok = puzzle.check(kernel_path=kernel_exe)
-            if ok is not True:
-                raise RuntimeError(f"kernel check failed for {out_path} (result={ok})")
+            if kernel_exe is not None:
+                assert isinstance(c, Client)
+                c.check(puzzle)
+
+
+class _NullCtx:
+    def __enter__(self):
+        return None
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
 
 
 def main() -> None:
