@@ -28,7 +28,11 @@ partial def run (trans: Transition α) (prev: Step α)
   stderr.putStr prompt
   stderr.flush
   let line ← stdin.getLine
-  let current := trans prev.state line
-  run trans current errPrefix outPrefix prompt
+  if line.isEmpty then
+    -- EOF: no more input
+    pure ()
+  else
+    let current := trans prev.state line
+    run trans current errPrefix outPrefix prompt
 
 end REPL
