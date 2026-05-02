@@ -19,11 +19,13 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
         | .apply hName => some hName
         | .exact hName => some hName
         | .cases hName => some hName
+        | .refine hName => some hName
         | _ => none
     match hName? with
       | none => none
       | some hName => Map.get? g.hyp hName
 
+  dbg_trace s!"----- {g.goal} {t} {h?}"
   match (g.goal, t, h?) with
     -- if goal is A → B
     -- add assumption h: A and change goal to B
