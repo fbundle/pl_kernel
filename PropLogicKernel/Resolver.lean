@@ -2,7 +2,7 @@ import PropLogicKernel.Basic
 import PropLogicKernel.Printer
 import PropLogicKernel.ListMap
 
-namespace PropLogicKernel.Resolve
+namespace PropLogicKernel.Resolver
 
 open PropLogicKernel.Basic
 open PropLogicKernel.Printer
@@ -151,4 +151,4 @@ def resolveTactic? [Map α Nat P] (s: S α) (t: T) (classical : Bool := False): 
           stack := newGoals ++ remainingGoals,
         }
 
-end PropLogicKernel.Resolve
+end PropLogicKernel.Resolver

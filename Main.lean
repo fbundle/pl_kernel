@@ -1,13 +1,13 @@
 import EchoLine.EchoLine
 import PropLogicKernel.Basic
 import PropLogicKernel.ListMap
-import PropLogicKernel.Resolve
+import PropLogicKernel.Resolver
 import PropLogicKernel.Parser
 
 open PropLogicKernel.Basic
 open PropLogicKernel.ListMap
 open PropLogicKernel.Parser
-open PropLogicKernel.Resolve
+open PropLogicKernel.Resolver
 
 def parseTactic? (s: String): Option T :=
   match s.trimAscii.toString with
