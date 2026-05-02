@@ -45,9 +45,12 @@ class Repl:
         self._p: Optional[subprocess.Popen[bytes]] = None
         self._last: Optional[ReplStep] = None
 
-    def start(self) -> "Repl":
+    def start(self) -> ReplStep:
+        """
+        Start the subprocess (if needed) and return the initial REPL step.
+        """
         if self._p is not None:
-            return self
+            raise ReplError("process already started")
 
         self._p = subprocess.Popen(
             self._argv,
@@ -59,41 +62,18 @@ class Repl:
             text=False,
             bufsize=0,
         )
-
         out, err = self._read_until_prompt()
         self._last = ReplStep(out=out, err=err, prompt=self._prompt_str)
-        return self
-
-    def close(self) -> None:
-        if self._p is None:
-            return
-        try:
-            if self._p.stdin:
-                self._p.stdin.close()
-        finally:
-            self._p.terminate()
-            try:
-                self._p.wait(timeout=1.0)
-            except Exception:
-                self._p.kill()
-                self._p.wait(timeout=1.0)
-        self._p = None
-
-    def __enter__(self) -> "Repl":
-        return self.start()
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        self.close()
-
-    def last(self) -> ReplStep:
-        if self._last is None:
-            self.start()
         assert self._last is not None
         return self._last
 
-    def send(self, line: str) -> ReplStep:
-        self.start()
-        assert self._p is not None and self._p.stdin is not None
+    def step(self, line: str) -> ReplStep:
+        """
+        Send one input line and return the next REPL step (reads until prompt).
+        """
+        if self._p is None:
+            raise ReplError("process not started; call start() first")
+        assert self._p.stdin is not None
 
         self._p.stdin.write((line.rstrip("\n") + "\n").encode(self._encoding))
         self._p.stdin.flush()
@@ -101,6 +81,50 @@ class Repl:
         out, err = self._read_until_prompt()
         self._last = ReplStep(out=out, err=err, prompt=self._prompt_str)
         return self._last
+
+    def finish(self, *, timeout_s: float = 2.0) -> int:
+        """
+        Gracefully finish the REPL by closing stdin (EOF) and waiting.
+
+        Returns exit_code. In this repo's Lean REPL, EOF returns the previous
+        step's `code` (0 iff the goal stack is empty).
+        """
+        if self._p is None:
+            raise ReplError("process not started; call start() first")
+
+        if self._p.stdin:
+            try:
+                self._p.stdin.close()
+            except Exception:
+                pass
+
+        p = self._p
+        try:
+            code = p.wait(timeout=float(timeout_s))
+            return int(code)
+        except subprocess.TimeoutExpired:
+            # Fallback: forceful shutdown if graceful EOF doesn't exit in time.
+            try:
+                p.terminate()
+                try:
+                    code2 = p.wait(timeout=1.0)
+                    return int(code2)
+                except subprocess.TimeoutExpired:
+                    p.kill()
+                    code3 = p.wait(timeout=1.0)
+                    return int(code3)
+            finally:
+                self._p = None
+        finally:
+            self._p = None
+
+    def __enter__(self) -> "Repl":
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        # `finish()` already implements graceful EOF and forceful fallback on timeout.
+        self.finish()
 
     def _read_until_prompt(self) -> tuple[str, str]:
         assert self._p is not None and self._p.stdout is not None and self._p.stderr is not None
