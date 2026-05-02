@@ -1,6 +1,6 @@
 import PropLogicKernel.Basic
 
-namespace PropLogicKernel.Print
+namespace PropLogicKernel.Printer
 
 open PropLogicKernel.Basic
 open PropLogicKernel.ListMap
@@ -82,4 +82,4 @@ def toStringGoal [Map α Nat P] (g: G α): String :=
 instance [Map α Nat P]: ToString (G α)  where
   toString := toStringGoal
 
-end PropLogicKernel.Print
+end PropLogicKernel.Printer

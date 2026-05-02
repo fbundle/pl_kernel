@@ -1,11 +1,11 @@
 import PropLogicKernel.Basic
-import PropLogicKernel.Print
+import PropLogicKernel.Printer
 import PropLogicKernel.ListMap
 
 namespace PropLogicKernel.Resolve
 
 open PropLogicKernel.Basic
-open PropLogicKernel.Print
+open PropLogicKernel.Printer
 open PropLogicKernel.ListMap
 
 -- resolveTacticToGoal?
@@ -146,6 +146,9 @@ def resolveTactic? [Map α Nat P] (s: S α) (t: T) (classical : Bool := False): 
     | g :: remainingGoals =>
       match resolveTacticToGoal? s.count g t classical with
         | Except.error msg => Except.error msg
-        | Except.ok (newCount, newGoals) => Except.ok { count := newCount, stack := newGoals ++ remainingGoals}
+        | Except.ok (newCount, newGoals) => Except.ok {
+          count := newCount,
+          stack := newGoals ++ remainingGoals,
+        }
 
 end PropLogicKernel.Resolve
