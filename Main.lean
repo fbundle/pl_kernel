@@ -9,7 +9,7 @@ def classical_logic: Bool := True
 -- A → (A → B) → (A → C) → (B ∨ C → D) → D
 -- ((P → ⊥) → ⊥) → P -- need classical logic
 
-def main : IO UInt32 := do
+def main : IO UInt32 :=
   let init := PropLogicKernel.REPL.init
   let repl := PropLogicKernel.REPL.trans classical_logic
 

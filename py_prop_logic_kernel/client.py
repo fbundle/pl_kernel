@@ -8,7 +8,10 @@ from typing import Optional
 from .repl import Repl
 
 
-_GOALS_RE = re.compile(r"^\s*--\s*goals\s+remaining\s+(\d+)\s*$", re.IGNORECASE | re.MULTILINE)
+_GOALS_RE = re.compile(
+    r"^\s*--\s*new_count\s+\d+\s+sorry_count\s+\d+\s+goals_remaining\s+(\d+)\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
 _ALL_DONE_RE = re.compile(r"^\s*--\s*all\s+goals\s+accomplished!\s*$", re.IGNORECASE | re.MULTILINE)
 _INT_RE = re.compile(r"^[0-9]+$")
 
@@ -156,7 +159,8 @@ class Client:
             "- Tactics: `intro`, `apply <n>`, `exact <n>`, `constructor`, `left`, `right`,\n"
             "          `cases <n>`, `lem <prop>`, `refine <n>`, `sorry`\n"
             "- Hypotheses are numbered in the rendered output (for example `0: A`).\n"
-            "- Status lines are on stderr (for example `-- goals remaining 2`), goals on stdout.\n"
+            "- Status lines are on stderr (for example `-- new_count 1 sorry_count 0 goals_remaining 2`),\n"
+            "  goals on stdout.\n"
             "- This package ships Python only; build the Lean binary locally with `lake build`.\n"
             "- Tactic semantics:\n"
             "  - `intro`: if goal is `A → B`, add fresh hypothesis `A` and change goal to `B`.\n"
