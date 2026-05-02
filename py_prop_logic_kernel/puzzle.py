@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import subprocess
 from dataclasses import dataclass
-from typing import Mapping, Sequence
+from pathlib import Path
+from typing import Mapping, Optional, Sequence
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,9 +19,33 @@ class Puzzle:
     proof: Sequence[str]
     settings: Mapping[str, object] | None = None
 
-    def as_repl_session(self) -> list[str]:
+    def check(self, kernel_path: str | Path) -> Optional[bool]:
         """
-        Return a runnable REPL transcript: `new <statement>` + proof lines.
+        Run this puzzle against the kernel binary using stdin (no REPL wrapper).
+
+        Returns:
+        - True: kernel exits with code 0
+        - False: kernel exits with nonzero code
+        - None: failed to run (missing binary, timeout, or OS error)
         """
-        return [f"new {self.statement}", *[line.rstrip("\n") for line in self.proof]]
+        exe = Path(kernel_path)
+        if not exe.exists():
+            return None
+
+        lines = [f"new {self.statement}", *[line.rstrip("\n") for line in self.proof]]
+        stdin_payload = "\n".join(lines) + "\n"
+
+        try:
+            proc = subprocess.run(
+                [str(exe)],
+                input=stdin_payload.encode("utf-8"),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=5.0,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+
+        return proc.returncode == 0
 
