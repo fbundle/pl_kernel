@@ -27,7 +27,7 @@ class Puzzle:
 
         Returns:
         - True: kernel exits with code 0 and stderr contains `all goals accomplished!`
-        - False: kernel exits with nonzero code
+        - False: kernel exits with nonzero code or does not report the success marker
         - None: failed to run (missing binary, timeout, or OS error)
         """
         exe = Path(kernel_path)
@@ -51,4 +51,3 @@ class Puzzle:
 
         err_text = proc.stderr.decode("utf-8", errors="replace")
         return (proc.returncode == 0) and (_ALL_DONE_MARKER in err_text)
-

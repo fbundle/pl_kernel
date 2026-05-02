@@ -143,6 +143,8 @@ def generate_puzzle(settings: GenerateSettings = GenerateSettings()) -> Puzzle:
 
     # Hypothesis indices are assigned in `intro` order starting from 0.
     proof: list[str] = ["intro"] * len(assumptions)
+    # Hypotheses are numbered in the same order they are introduced by `intro`.
+    # Given how `_build_statement` wraps implications, this matches `assumptions` order.
     atom_to_hyp = {a: i for i, a in enumerate(assumptions)}
     proof.extend(_proof_for_goal(goal, atom_to_hyp, rng))
 
