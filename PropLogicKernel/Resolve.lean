@@ -42,7 +42,14 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
           goal := A1,
         }])
       else
-        Except.error s!"cannot apply {h?} into {B}"
+        Except.ok (count + 1, [{
+          hyp := g.hyp,
+          goal := A1,
+        }, {
+          hyp := g.hyp,
+          goal := (.imp B1 B),
+        }])
+        -- Except.error s!"cannot apply {h?} into {B}"
 
     -- if goal is A and h: A
     -- done

@@ -57,7 +57,7 @@ def s0: State := {
 -- A → (A → B) → (A → C) → (B ∨ C → D) → D
 -- (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
 
--- (P → ⊥) → ⊥ → P
+-- ((P → ⊥) → ⊥) → P
 def p0: String := "type `new <goal>` to add new goal\n> "
 -- def p0: String := prompt s0
 
