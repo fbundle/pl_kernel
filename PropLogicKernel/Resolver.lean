@@ -135,12 +135,6 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (cl : Bool
       else
         Except.error s!"refine is only available in classical logic"
 
-    -- APPLICATION LEVEL
-
-    -- sorry
-    | (_, .sorr, _) =>
-      Except.ok (count, [])
-
     | _ => Except.error s!"cannot resolve tactic {t}"
 
 def resolveTactic? [Map α Nat P] (s: S α) (t: T) (cl : Bool := False): Except String (S α) :=
@@ -154,6 +148,16 @@ def resolveTactic? [Map α Nat P] (s: S α) (t: T) (cl : Bool := False): Except 
         goal := C,
       } :: s.stack,
     }
+
+    -- sorry -- remove the current goal
+    | .sorr =>
+      match s.stack with
+        | [] => Except.error s!"cannot resolve {t} into an empty set of goals"
+        | _ :: remainingGoals =>
+          Except.ok {
+            count := s.count,
+            stack := remainingGoals,
+          }
 
     -- other tactics acts on a goal and might return multiple goals
     | _ =>

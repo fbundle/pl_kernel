@@ -16,11 +16,23 @@ open PropLogicKernel.Printer
 
 abbrev State := S (ListMap Nat P)
 
-def getCode (s: State): UInt32 :=
-  if s.stack.isEmpty then 0 else 1
+structure AppState where
+  state: State
+  sorryCount: Nat
+  newCount: Nat
 
-def init: REPL.Step State :=
-  let s := {count := 0, stack := []}
+def getCode (s: AppState): UInt32 :=
+  if s.state.stack.isEmpty ∧ (s.sorryCount == 0) ∧ (s.newCount ≥ 1) then
+    0
+  else
+    1
+
+def init: REPL.Step AppState :=
+  let s := {
+    state := {count := 0, stack := []},
+    sorryCount := 0,
+    newCount := 0,
+  }
   {
     state := s,
     code := getCode s,
@@ -28,8 +40,8 @@ def init: REPL.Step State :=
     out := [],
   }
 
-def getPrompt (s: State): REPL.Step State :=
-  match s.stack with
+def getPrompt (s: AppState): REPL.Step AppState :=
+  match s.state.stack with
     | [] =>
       {
         state := s,
@@ -43,17 +55,17 @@ def getPrompt (s: State): REPL.Step State :=
       {
         state := s,
         code := getCode s,
-        err := [s!"goals remaining {s.stack.length}"],
+        err := [s!"goals remaining {s.state.stack.length}"],
         out := lines,
       }
 
-def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step State :=
+def trans (classical_logic: Bool) (s: AppState) (inputLine: String): REPL.Step AppState :=
   let inputLine := inputLine.trimAscii.toString
 
   if inputLine.length == 0 then
     {
-        state := state,
-        code := getCode state,
+        state := s,
+        code := getCode s,
         err := [],
         out := [],
     }
@@ -61,20 +73,31 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
     match parseTactic? inputLine with
       | none =>
         {
-          state := state,
-          code := getCode state,
+          state := s,
+          code := getCode s,
           err := ["parse error"],
           out := [],
         }
       | some tactic =>
-        match resolveTactic? state tactic classical_logic with
+        let newSorryCount := s.sorryCount + match tactic with
+          | .sorr => 1
+          | _ => 0
+        let newNewCount := s.newCount + match tactic with
+          | .new _ => 1
+          | _ => 0
+
+        match resolveTactic? s.state tactic classical_logic with
           | Except.error msg =>
             {
-              state := state,
-              code := getCode state,
+              state := s,
+              code := getCode s,
               err := [msg],
               out := [],
             }
-          | Except.ok newState => getPrompt newState
+          | Except.ok newS => getPrompt {
+            state := newS,
+            sorryCount:= newSorryCount,
+            newCount := newNewCount,
+          }
 
 end PropLogicKernel.REPL
