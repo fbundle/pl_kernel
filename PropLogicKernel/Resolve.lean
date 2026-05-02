@@ -42,18 +42,7 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
           goal := A1,
         }])
       else
-        if classical then
-          -- in classical logic, we allow to assume application (A1 → B1) into B
-          -- by adding a new goal B1 → B
-          Except.ok (count + 1, [{
-            hyp := g.hyp,
-            goal := A1,
-          }, {
-            hyp := g.hyp,
-            goal := (.imp B1 B),
-          }])
-        else
-          Except.error s!"cannot apply {h?} into {B}"
+        Except.error s!"cannot apply {h?} into {B}"
 
     -- if goal is A and h: A
     -- done
@@ -132,6 +121,20 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
         }])
       else
         Except.error s!"lem is only available in classical logic"
+
+    -- if goal is B and h: A1 → B1
+    -- split into two goals A1 and (B1 → B)
+    | (B, .refine _, some (.imp A1 B1)) =>
+      if classical then
+        Except.ok (count, [{
+          hyp := g.hyp,
+          goal := A1,
+        }, {
+          hyp := g.hyp,
+          goal := (.imp B1 B),
+        }])
+      else
+        Except.error s!"refine is only available in classical logic"
 
     | _ => Except.error s!"cannot resolve tactic {t}"
 

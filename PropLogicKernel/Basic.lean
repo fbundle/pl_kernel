@@ -44,9 +44,14 @@ inductive T where
   -- cases doesn't resolve implication
   | cases (h: Nat): T
 
+  -- classical logic
+
   -- law of excluded middle
   -- add (A → False) ∨ A
   | lem (p: P): T
+  -- if goal is B and h: A1 → B1
+  -- split into two goals A1 and (B1 → B)
+  | refine (h: Nat): T
 
 
 

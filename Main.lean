@@ -25,6 +25,8 @@ def parseTactic? (s: String): Option T :=
       (s.drop 6).toString |> String.toNat? |>.map T.cases
     else if s.startsWith "lem " then
       parseProp? ((s.drop 4).toString) |>.map (λ (p, _) => T.lem p)
+    else if s.startsWith "refine " then
+      (s.drop 7).toString |> String.toNat? |>.map T.refine
     else
       none
 
