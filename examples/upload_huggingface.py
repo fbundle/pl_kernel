@@ -4,7 +4,7 @@ import sys
 from huggingface_hub import login, upload_large_folder
 from dotenv import load_dotenv
 
-OUTPUT_DIR = "output/prop_logic_kernel"
+OUTPUT_DIR = "output/prop_logic_puzzle"
 
 def upload(output_dir: str):
     output_dir = os.path.abspath(output_dir)

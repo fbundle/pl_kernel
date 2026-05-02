@@ -11,7 +11,9 @@ dependencies = []
 path = "py_prop_logic_kernel/__init__.py"
 
 [tool.uv.workspace]
-members = []
+members = [
+    "examples",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["py_prop_logic_kernel"]
