@@ -25,19 +25,7 @@ def getCode (s: State): UInt32 :=
   else
     1
 
-def init: REPL.Step State :=
-  let s := {
-    varCount := 0,
-    sorrCount := 0,
-    newCount := 0,
-    stack := []
-  }
-  {
-    state := s,
-    code := getCode s,
-    err := ["type `new <goal>` to add new goal"],
-    out := [],
-  }
+
 
 def getPrompt (s: State): REPL.Step State :=
   match s.stack with
@@ -66,7 +54,13 @@ def getPrompt (s: State): REPL.Step State :=
         ],
         out := lines,
       }
-
+def init: REPL.Step State :=
+  getPrompt {
+    varCount := 0,
+    sorrCount := 0,
+    newCount := 0,
+    stack := []
+  }
 def trans (classical_logic: Bool) (s: State) (inputLine: String): REPL.Step State :=
   let inputLine := inputLine.trimAscii.toString
 
