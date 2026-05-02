@@ -48,8 +48,8 @@ def s0: State := {
   stack := [],
 }
 
--- def p0: String := "type `new <goal>` to add new goal\n> "
-def p0: String := prompt s0
+def p0: String := "type `new <goal>` to add new goal\n> "
+-- def p0: String := prompt s0
 
 def stateTransition (state: State) (inputLine: String): (State × String) :=
   match parseInputLine? inputLine.trimAscii.toString with
