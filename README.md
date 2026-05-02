@@ -4,7 +4,7 @@ This repo contains:
 
 - `Main.lean`: a tiny proposition-logic tactic kernel wrapped in a `REPL.run` loop
 - `py_repl/`: a small Python package that can drive any `REPL.run`-based binary via stdin/stdout/stderr
-- `prop_logic_kernel.py`: a Python entrypoint that runs the built binary via `py_repl`
+- `py_prop_logic_kernel/`: the Python package you publish; it parses the kernel output into structured steps such as `goals_remaining`
 
 ## REPL protocol spec (`REPL.run`)
 
@@ -29,7 +29,8 @@ Then the next step repeats forever.
 
 The following files were written by Cursor AI:
 
-- `prop_logic_kernel.py`
+- `py_prop_logic_kernel/__init__.py`
+- `py_prop_logic_kernel/repl.py`
 - `py_repl/__init__.py`
 - `py_repl/repl.py`
 - `PropLogicKernel/Parser.lean`
