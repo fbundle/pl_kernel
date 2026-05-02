@@ -13,7 +13,7 @@ open PropLogicKernel.Resolver
 abbrev State := S (ListMap Nat P)
 
 def init: (State × String) := (
-  {count := 0, stack := []}, "type `new <goal>` to add new goal"
+  {count := 0, stack := []}, "-- type `new <goal>` to add new goal"
 )
 
 def REPL (classical_logic: Bool) (state: State) (inputLine: String): (State × String) :=
