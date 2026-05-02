@@ -8,30 +8,28 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 
-class EchoLineReplError(RuntimeError):
+class ReplError(RuntimeError):
     pass
 
 
 @dataclass(frozen=True)
 class Step:
-    delta: str
+    out: str
+    err: str
     prompt: str
 
 
-class EchoLineRepl:
+class Repl:
     """
-    Generic Python client for the `EchoLine.loop` protocol.
+    Generic Python client for the `REPL.run` protocol used by this repo.
 
-    EchoLine contract (see `EchoLine/EchoLine.lean`):
-    - On each step, the program prints `delta` to stdout (newline-terminated)
-    - Then prints `prompt` to stderr (no newline)
-    - Then waits for one input line on stdin
-    - The next step repeats
+    Contract (see `REPL/REPL.lean`):
+    - prints `err` to stderr (possibly multiple lines)
+    - prints `out` to stdout (possibly multiple lines)
+    - prints `prompt` to stderr (no newline)
+    - reads one input line from stdin
 
-    This client:
-    - writes one input line
-    - reads stdout/stderr until it observes the prompt bytes on stderr
-    - returns the stdout delta as a decoded string
+    This client captures both stdout+stderr until the prompt is observed on stderr.
     """
 
     def __init__(
@@ -55,7 +53,7 @@ class EchoLineRepl:
         self._p: Optional[subprocess.Popen[bytes]] = None
         self._last: Optional[Step] = None
 
-    def start(self) -> "EchoLineRepl":
+    def start(self) -> "Repl":
         if self._p is not None:
             return self
 
@@ -70,8 +68,8 @@ class EchoLineRepl:
             bufsize=0,
         )
 
-        delta = self._read_delta_until_prompt()
-        self._last = Step(delta=delta, prompt=self._prompt_str)
+        out, err = self._read_until_prompt()
+        self._last = Step(out=out, err=err, prompt=self._prompt_str)
         return self
 
     def close(self) -> None:
@@ -89,7 +87,7 @@ class EchoLineRepl:
                 self._p.wait(timeout=1.0)
         self._p = None
 
-    def __enter__(self) -> "EchoLineRepl":
+    def __enter__(self) -> "Repl":
         return self.start()
 
     def __exit__(self, exc_type, exc, tb) -> None:
@@ -108,13 +106,13 @@ class EchoLineRepl:
         self._p.stdin.write((line.rstrip("\n") + "\n").encode(self._encoding))
         self._p.stdin.flush()
 
-        delta = self._read_delta_until_prompt()
-        self._last = Step(delta=delta, prompt=self._prompt_str)
+        out, err = self._read_until_prompt()
+        self._last = Step(out=out, err=err, prompt=self._prompt_str)
         return self._last
 
     # ---- internals ----
 
-    def _read_delta_until_prompt(self) -> str:
+    def _read_until_prompt(self) -> tuple[str, str]:
         assert self._p is not None and self._p.stdout is not None and self._p.stderr is not None
 
         out_buf = bytearray()
@@ -130,25 +128,43 @@ class EchoLineRepl:
                 if not events:
                     code = self._p.poll()
                     if code is not None:
-                        raise EchoLineReplError(f"process terminated (exit_code={code})")
+                        raise ReplError(f"process terminated (exit_code={code})")
                     continue
 
                 for key, _mask in events:
                     chunk = os.read(key.fileobj.fileno(), 4096)
                     if chunk == b"":
                         code = self._p.poll()
-                        raise EchoLineReplError(f"process terminated (exit_code={code})")
+                        raise ReplError(f"process terminated (exit_code={code})")
 
                     if key.fileobj is self._p.stdout:
                         out_buf.extend(chunk)
                     else:
                         err_buf.extend(chunk)
 
-                    # Prompt is written to stderr.
                     if self._prompt_bytes in err_buf:
                         idx = err_buf.index(self._prompt_bytes)
-                        del err_buf[: idx + len(self._prompt_bytes)]
-                        return out_buf.decode(self._encoding, errors="replace").rstrip("\n")
+                        prompt_end = idx + len(self._prompt_bytes)
+                        captured_err = bytes(err_buf[:idx])
+                        del err_buf[:prompt_end]
+
+                        # Prompt can arrive before stdout is fully drained; do a
+                        # short non-blocking drain to reduce step skew.
+                        while True:
+                            extra = sel.select(timeout=0)
+                            if not extra:
+                                break
+                            for k2, _m2 in extra:
+                                if k2.fileobj is not self._p.stdout:
+                                    continue
+                                more = os.read(k2.fileobj.fileno(), 4096)
+                                if more:
+                                    out_buf.extend(more)
+
+                        return (
+                            out_buf.decode(self._encoding, errors="replace").rstrip("\n"),
+                            captured_err.decode(self._encoding, errors="replace").rstrip("\n"),
+                        )
         finally:
             for stream in (self._p.stdout, self._p.stderr):
                 try:

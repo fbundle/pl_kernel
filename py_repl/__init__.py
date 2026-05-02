@@ -1,4 +1,4 @@
-from .echo_line import EchoLineRepl, EchoLineReplError, Step
+from .repl import Repl, ReplError, Step
 
-__all__ = ["EchoLineRepl", "EchoLineReplError", "Step"]
+__all__ = ["Repl", "ReplError", "Step"]
 

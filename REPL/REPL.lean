@@ -22,8 +22,11 @@ partial def run (trans: Transition α) (prev: Output α)
 
   stderr.putStr err
   stdout.putStr out
+  stderr.flush
+  stdout.flush
 
   stderr.putStr prompt
+  stderr.flush
   let line ← stdin.getLine
   let current := trans prev.state line
   run trans current errPrefix outPrefix prompt

@@ -1,6 +1,6 @@
 import Lean.Data.Json
 
-namespace EchoLine
+namespace REPL.Command
 
 def Json := Lean.Json
 def mkObj := Lean.Json.mkObj
@@ -27,4 +27,4 @@ def ReadFileTextResponse (json: Json): Except String String := do
   ⟨ "content", "file content" ⟩,
 ])
 
-end EchoLine
+end REPL.Command
