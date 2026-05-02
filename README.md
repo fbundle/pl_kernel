@@ -62,6 +62,15 @@ These are the actual rules implemented in `PropLogicKernel/Resolver.lean`.
 - `lem` and `refine` fail if classical logic is disabled.
 - Any tactic other than `new` fails on an empty goal stack.
 
+### Proposition parser constraints
+
+`PropLogicKernel/Parser.lean` normalizes proposition input to uppercase and rejects any character outside this set:
+
+- whitespace
+- parentheses: `(`, `)`
+- operators/constants: `∧`, `∨`, `→`, `⊥`
+- atom characters: uppercase letters `A-Z`, digits `0-9`, underscore `_`
+
 ## REPL protocol spec (`REPL.run`)
 
 The executable produced by `lake build` (see `.lake/build/bin/Main-lean`) implements a simple line-based protocol driven by `REPL.run` in `REPL/REPL.lean`.
@@ -71,7 +80,7 @@ Each **step**:
 - **stderr (error/status stream)**: write zero or more lines of status/errors.
   - In this repo, status lines are prefixed with `-- ` and include counters, for example:
     - `-- new_count 1 sorry_count 0 goals_remaining 2`
-    - `-- all goals accomplished!`
+    - `-- all goals accomplished!` (emitted only when success conditions are met)
 - **stdout (output stream)**: write zero or more lines of “main output” (e.g. the rendered goal state).
 - **stderr (prompt)**: write the prompt string (default `> `) **without** a trailing newline.
 - **stdin (input)**: read exactly one line (newline-terminated). That line is passed to the transition function.
@@ -106,7 +115,7 @@ Important nuance: parse/resolve errors do not directly force code `1`; they keep
   - sends lines to the REPL
   - validates tactic surface syntax in Python before sending (including strict proposition parsing for `new` and `lem`)
   - parses stderr status lines like `-- new_count N sorry_count M goals_remaining K`
-  - returns structured `Step(out, err, new_count, sorry_count, goals_remaining)`
+  - returns structured `Step(out, err, new_count, sorry_count, goals_remaining, all_goals_accomplished)`
 - `Client.send(line)`:
   - sends any supported REPL command, including `new` and `sorry`
 - `Client.send_honest(line)`:
@@ -114,6 +123,9 @@ Important nuance: parse/resolve errors do not directly force code `1`; they keep
 - `Client.finish()`:
   - closes stdin (EOF), allowing the Lean process to return its final `code`
   - returns graceful exit code (`int`) when graceful shutdown succeeds, else `None` on timeout fallback
+- `py_prop_logic_kernel.Puzzle.check(kernel_path)`:
+  - runs the kernel binary directly from stdin (without the REPL wrapper)
+  - returns `True` only if exit code is `0` **and** stderr contains `all goals accomplished!`
 - `Client.init_prompt()`:
   - returns a human/AI-oriented summary of usage and tactic semantics
 

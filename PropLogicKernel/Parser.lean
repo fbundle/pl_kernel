@@ -71,6 +71,7 @@ end
 
 /-- Parse a proposition; returns the remainder string (after skipping trailing whitespace). -/
 def parseProp? (s : String) : Option P :=
+  let s := s.toUpper -- make sure the proposition is in uppercase
   if !(s.toList.all isAllowedPropChar) then
     none
   else
