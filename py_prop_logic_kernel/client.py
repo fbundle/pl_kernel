@@ -9,6 +9,7 @@ from .repl import Repl
 
 
 _GOALS_RE = re.compile(r"^\s*--\s*goals\s+remaining\s+(\d+)\s*$", re.IGNORECASE | re.MULTILINE)
+_ALL_DONE_RE = re.compile(r"^\s*--\s*all\s+goals\s+accomplished!\s*$", re.IGNORECASE | re.MULTILINE)
 _INT_RE = re.compile(r"^[0-9]+$")
 
 
@@ -146,6 +147,7 @@ class Client:
         self._prompt = prompt
         self._repl: Optional[Repl] = None
         self._last: Optional[Step] = None
+        self._graceful_exit_code: Optional[int] = None
 
     def init_prompt(self) -> str:
         return (
@@ -174,44 +176,43 @@ class Client:
 
     def start(self) -> Step:
         if self._repl is not None:
-            assert self._last is not None
-            return self._last
+            raise RuntimeError("client already started")
         if not self._exe.exists():
             raise FileNotFoundError(f"executable not found at {self._exe!s}; run `lake build` first")
-        self._repl = Repl([str(self._exe)], cwd=str(self._cwd), prompt=self._prompt).start()
-        last = self._repl.last()
-        self._last = self._to_step(last.out, last.err)
+        self._graceful_exit_code = None
+        self._repl = Repl([str(self._exe)], cwd=str(self._cwd), prompt=self._prompt)
+        repl_step = self._repl.start()
+        self._last = self._to_step(repl_step.out, repl_step.err)
         return self._last
 
-    def close(self) -> None:
+    def finish(self, *, timeout_s: float = 2.0) -> Optional[int]:
         if self._repl is None:
-            return
-        self._repl.close()
+            raise RuntimeError("client not started; call start() first")
+        code = self._repl.finish(timeout_s=timeout_s)
+        self._graceful_exit_code = code
         self._repl = None
+        return code
 
-    def __enter__(self) -> "Client":
-        self.start()
-        return self
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        self.close()
+    def graceful_exit_code(self) -> Optional[int]:
+        return self._graceful_exit_code
 
     def last(self) -> Step:
         if self._last is None:
-            self.start()
+            raise RuntimeError("client has no steps yet; call start() first")
         assert self._last is not None
         return self._last
 
     def send(self, line: str) -> Step:
+        if self._repl is None:
+            raise RuntimeError("client not started; call start() first")
+
         ok, msg = _tactic_is_valid_strict(line)
         if not ok:
             current_goals = self._last.goals_remaining if self._last is not None else None
             self._last = Step(out="", err=f"python parse error: {msg}", goals_remaining=current_goals)
             return self._last
 
-        self.start()
-        assert self._repl is not None
-        repl_step = self._repl.send(line)
+        repl_step = self._repl.step(line)
         self._last = self._to_step(repl_step.out, repl_step.err)
         return self._last
 
@@ -226,8 +227,20 @@ class Client:
             return self._last
         return self.send(line)
 
+    def __enter__(self) -> "Client":
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.finish()
+
     def _to_step(self, out: str, err: str) -> Step:
         m = _GOALS_RE.search(err)
-        goals = int(m.group(1)) if m else None
+        if m:
+            goals = int(m.group(1))
+        elif _ALL_DONE_RE.search(err):
+            goals = 0
+        else:
+            goals = None
         return Step(out=out, err=err, goals_remaining=goals)
 
