@@ -65,6 +65,7 @@ end
 
 /-- Parse a proposition; returns the remainder string (after skipping trailing whitespace). -/
 def parseProp? (s : String) : Option P :=
+  let s := s.toUpper -- make sure the proposition is in uppercase
   match parseImp (skipWs s.toList) with
   | none => none
   | some (p, _) => some p
