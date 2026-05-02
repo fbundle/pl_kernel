@@ -51,13 +51,14 @@ instance: ToString P where
 
 def toStringTactic (t: T): String :=
   match t with
-    | .intro => "INTRO"
-    | .apply h => s!"APPLY {h}"
-    | .exact h => s!"EXACT {h}"
-    | .constructor => "CONSTRUCTOR"
-    | .cases h => s!"CASES {h}"
-    | .left => s!"LEFT"
-    | .right => s!"RIGHT"
+    | .intro => "intro"
+    | .apply h => s!"apply {h}"
+    | .exact h => s!"exact {h}"
+    | .constructor => "constructor"
+    | .left => "left"
+    | .right => "right"
+    | .sorr => "sorry"
+    | .cases h => s!"cases {h}"
 
 instance: ToString T where
   toString := toStringTactic

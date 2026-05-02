@@ -30,6 +30,8 @@ inductive T where
   -- if goal is A ∨ B
   -- change goal to B
   | right: T
+  -- sorry
+  | sorr: T
   -- if h: A ∨ B
   -- split into two subproblems (assume h₁: A) and (assume h₂: B)
   -- if h: A ∧ B

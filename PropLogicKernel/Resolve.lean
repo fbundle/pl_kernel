@@ -41,7 +41,6 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
     -- if goal is A and h: A
     -- done
     | (A, .exact _, some A1) =>
-
       if A == A1 then
         Except.ok (count, [])
       else
@@ -60,6 +59,25 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
           goal := B,
         }
       ])
+
+    -- if goal is A ∨ B
+    -- change goal to A
+    | (.or A B, .left, _) =>
+      Except.ok (count, [{
+        hyp := g.hyp,
+        goal := A,
+      }])
+    -- if goal is A ∨ B
+    -- change goal to B
+    | (.or A B, .right, _) =>
+      Except.ok (count, [{
+        hyp := g.hyp,
+        goal := B,
+      }])
+
+    -- sorry
+    | (_, .sorr, _) =>
+      Except.ok (count, [])
 
     -- if h: A ∨ B
     -- split into two subproblems (assume h₁: A) and (assume h₂: B)
@@ -87,20 +105,6 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
     | (_, .cases _, some (.fals)) =>
       Except.ok (count, [])
 
-    -- if goal is A ∨ B
-    -- change goal to A
-    | (.or A B, .left, _) =>
-      Except.ok (count, [{
-        hyp := g.hyp,
-        goal := A,
-      }])
-    -- if goal is A ∨ B
-    -- change goal to B
-    | (.or A B, .right, _) =>
-      Except.ok (count, [{
-        hyp := g.hyp,
-        goal := B,
-      }])
     | _ => Except.error s!"cannot resolve tactic {t}"
 
 def resolveTactic? [Map α Nat P] (s: S α) (t: T): Except String (S α) :=

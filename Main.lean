@@ -7,6 +7,7 @@ def parseTactic? (s: String): Option T :=
   | "constructor" => some T.constructor
   | "left" => some T.left
   | "right" => some T.right
+  | "sorry" => some T.sorr
   | _ =>
     if s.startsWith "apply " then
       (s.drop 6).toString |> String.toNat? |>.map T.apply
@@ -17,43 +18,29 @@ def parseTactic? (s: String): Option T :=
     else
       none
 
-def State := S (ListMap Nat P)
+abbrev State := S (ListMap Nat P)
+
+def prompt (s: State): String :=
+  match s.stack with
+    | [] => "\nno_more_goal\n> "
+    | g :: _ => s!"\ncurrent_goal (1 / {s.stack.length})\n{g}\n> "
 
 def s0: State := {
   count := 0,
   stack := [],
 }
 
-def p0: String := "type `new <goal>` to add new goal\n> "
+-- def p0: String := "type `new <goal>` to add new goal\n> "
+def p0: String := prompt s0
 
 def stateTransition (state: State) (inputLine: String): (State × String × Bool) :=
-
-
-
-  sorry
-
-
-
-
-
-
-def prompt (s: State): String :=
-  match s.stack with
-    | [] => "\nno_more_goal"
-    | g :: _ => s!"\ncurrent_goal (1 / {s.stack.length})\n{g}\n> "
-
-def apply (s: State) (line: String): Option (State × String) :=
-  if isDone s then none else
-
-  let t?: Option T := parseTactic? line.trimAscii.toString
+  let t?: Option T := parseTactic? inputLine.trimAscii.toString
   match t? with
-    | none => (s, "parse error, try again")
+    | none => (state, "parse error, try again", true)
     | some t =>
-      match resolveTactic? s t with
-        | Except.error msg => (s, msg)
-        | Except.ok s =>
-          (s, s!"resolved tactic {t}")
-
+      match resolveTactic? state t with
+        | Except.error msg => (state, msg, true)
+        | Except.ok newState => (newState, prompt newState, true)
 
 def andMany (ps: List P) (last: P): P :=
   match ps with
@@ -74,10 +61,10 @@ def main : IO UInt32 := do
   let B := P.atom "B"
   let C := P.atom "C"
   let D := P.atom "D"
-  let s := initState (emptyList: ListMap Nat P)
+  let s: State := initState (emptyList: ListMap Nat P)
       -- (.imp (.and A B) (.and B A))
       -- (.imp (.and (.imp A B) (.imp B .fals)) (.imp A .fals))
-      -- (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
-  EchoLine.main_loop apply s prompt
+      (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
+  EchoLine.loop stateTransition s (prompt s) true
   IO.println "Goodbye!"
   return 0
