@@ -63,6 +63,30 @@ class Puzzle:
         return (proc.returncode == 0) and (_ALL_DONE_MARKER in err_text)
 
 
+def load_puzzle_from_file(path: str | Path) -> Puzzle:
+    """
+    Load a single puzzle from a `stdin.txt`-style file:
+
+    - first non-empty line must be `new <statement>`
+    - subsequent non-empty lines are tactics
+    """
+    p = Path(path)
+    text = p.read_text(encoding="utf-8")
+    raw_lines = [ln.rstrip("\n") for ln in text.splitlines()]
+
+    lines = [ln.strip() for ln in raw_lines if ln.strip() != ""]
+    if not lines:
+        raise ValueError(f"empty puzzle file: {p}")
+
+    first = lines[0]
+    if not first.lower().startswith("new "):
+        raise ValueError(f"expected first line `new <statement>` in {p}, got: {first!r}")
+
+    statement = first[4:].strip()
+    proof = lines[1:]
+    return Puzzle(statement=statement, proof=proof, settings={"source_path": str(p)})
+
+
 @dataclass(frozen=True)
 class Step:
     out: str
