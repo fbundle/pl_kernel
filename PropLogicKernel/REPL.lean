@@ -42,7 +42,10 @@ def getPrompt (s: State): REPL.Step State :=
       {
         state := s,
         code := getCode s,
-        err := ["all goals accomplished!"],
+        err := [
+          s!"new_count {s.newCount} sorry_count {s.sorrCount} goals_remaining {s.stack.length}",
+          "all goals accomplished!",
+        ],
         out := [],
       }
     | g :: _ =>
@@ -51,7 +54,9 @@ def getPrompt (s: State): REPL.Step State :=
       {
         state := s,
         code := getCode s,
-        err := [s!"goals remaining {s.stack.length}"],
+        err := [
+          s!"new_count {s.newCount} sorry_count {s.sorrCount} goals_remaining {s.stack.length}",
+        ],
         out := lines,
       }
 
