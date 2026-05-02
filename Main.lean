@@ -85,10 +85,13 @@ def main : IO UInt32 := do
   let B := P.atom "B"
   let C := P.atom "C"
   let D := P.atom "D"
-  let s: State := initState (emptyList: ListMap Nat P)
+  let s: State := s0 -- initState (emptyList: ListMap Nat P)
+      -- A ∧ B → B ∧ A
       -- (.imp (.and A B) (.and B A))
+      -- (A → B) ∧ (B → ⊥) → A → ⊥
       -- (.imp (.and (.imp A B) (.imp B .fals)) (.imp A .fals))
-      (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
+      -- A → (A → B) → (A → C) → (B ∨ C → D) → D
+      -- (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
   EchoLine.loop stateTransition s (prompt s)
   IO.println "Goodbye!"
   return 0
