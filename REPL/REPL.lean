@@ -1,14 +1,14 @@
 
 namespace REPL
 
-structure Output α where
+structure Step α where
   state: α
   err: List String
   out: List String
 
-abbrev Transition α := α → String → Output α
+abbrev Transition α := α → String → Step α
 
-partial def run (trans: Transition α) (prev: Output α)
+partial def run (trans: Transition α) (prev: Step α)
   (errPrefix: String := "-- ")
   (outPrefix: String := "")
   (prompt: String := "> ")

@@ -16,13 +16,13 @@ open PropLogicKernel.Printer
 
 abbrev State := S (ListMap Nat P)
 
-def init: REPL.Output State :=
+def init: REPL.Step State :=
   {
     state := {count := 0, stack := []},
     err := ["type `new <goal>` to add new goal"],
     out := [],
   }
-def getPrompt (s: State): REPL.Output State :=
+def getPrompt (s: State): REPL.Step State :=
   match s.stack with
     | [] =>
       {
@@ -39,7 +39,7 @@ def getPrompt (s: State): REPL.Output State :=
         out := lines,
       }
 
-def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Output State :=
+def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step State :=
   let inputLine := inputLine.trimAscii.toString
 
   if inputLine.length == 0 then
