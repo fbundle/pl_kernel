@@ -13,117 +13,6 @@ _GOALS_RE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 _ALL_DONE_RE = re.compile(r"^\s*--\s*all\s+goals\s+accomplished!\s*$", re.IGNORECASE | re.MULTILINE)
-_INT_RE = re.compile(r"^[0-9]+$")
-
-
-def _is_forbidden_honest_tactic(line: str) -> bool:
-    s = line.strip().lower()
-    return ("sorry" in s) or ("new" in s)
-
-
-class _PropParseError(ValueError):
-    pass
-
-
-def _skip_ws(s: str, i: int) -> int:
-    n = len(s)
-    while i < n and s[i].isspace():
-        i += 1
-    return i
-
-
-def _parse_unary(s: str, i: int) -> int:
-    i = _skip_ws(s, i)
-    if i >= len(s):
-        raise _PropParseError("unexpected end of input")
-    ch = s[i]
-    if ch == "⊥":
-        return i + 1
-    if ch == "(":
-        j = _parse_imp(s, i + 1)
-        j = _skip_ws(s, j)
-        if j >= len(s) or s[j] != ")":
-            raise _PropParseError("missing ')'")
-        return j + 1
-    if ch.isalpha():
-        j = i + 1
-        while j < len(s) and s[j].isalpha():
-            j += 1
-        return j
-    raise _PropParseError(f"unexpected character {ch!r}")
-
-
-def _parse_and(s: str, i: int) -> int:
-    i = _parse_unary(s, i)
-    i = _skip_ws(s, i)
-    if i < len(s) and s[i] == "∧":
-        return _parse_and(s, i + 1)  # right-assoc, matching Lean parser
-    return i
-
-
-def _parse_or(s: str, i: int) -> int:
-    i = _parse_and(s, i)
-    i = _skip_ws(s, i)
-    if i < len(s) and s[i] == "∨":
-        return _parse_or(s, i + 1)  # right-assoc
-    return i
-
-
-def _parse_imp(s: str, i: int) -> int:
-    i = _parse_or(s, i)
-    i = _skip_ws(s, i)
-    if i < len(s) and s[i] == "→":
-        return _parse_imp(s, i + 1)  # right-assoc
-    return i
-
-
-def _prop_is_valid_strict(prop: str) -> tuple[bool, str]:
-    """
-    Strictly validate proposition syntax (must consume full input).
-    Mirrors the Lean parser behavior but rejects trailing garbage.
-    """
-    try:
-        j = _parse_imp(prop, 0)
-        j = _skip_ws(prop, j)
-        if j != len(prop):
-            return False, f"trailing input at position {j}"
-        return True, ""
-    except _PropParseError as e:
-        return False, str(e)
-
-
-def _tactic_is_valid_strict(line: str) -> tuple[bool, str]:
-    """
-    Validate tactic surface syntax in Python before sending to Lean.
-    This only checks shape, not whether it applies to the current goal.
-    """
-    s = line.strip()
-    if s == "":
-        return True, ""
-    if s in {"intro", "constructor", "left", "right", "sorry"}:
-        return True, ""
-
-    def one_nat(prefix: str) -> tuple[bool, str]:
-        if not s.startswith(prefix):
-            return False, ""
-        rest = s[len(prefix) :].strip()
-        if rest == "" or not _INT_RE.match(rest):
-            return False, f"expected Nat after {prefix.strip()!r}"
-        return True, ""
-
-    for pref in ("apply ", "exact ", "cases ", "refine "):
-        ok, msg = one_nat(pref)
-        if ok or msg:
-            return ok, msg
-
-    if s.startswith("new "):
-        ok, msg = _prop_is_valid_strict(s[4:].strip())
-        return (ok, msg if ok else f"invalid proposition for `new`: {msg}")
-    if s.startswith("lem "):
-        ok, msg = _prop_is_valid_strict(s[4:].strip())
-        return (ok, msg if ok else f"invalid proposition for `lem`: {msg}")
-
-    return False, "unknown tactic"
 
 
 @dataclass(frozen=True)
@@ -160,7 +49,7 @@ class Client:
             "Prop logic kernel REPL usage:\n"
             "- Add a goal: `new <prop>` (example: `new A → A`)\n"
             "- Tactics: `intro`, `apply <n>`, `exact <n>`, `constructor`, `left`, `right`,\n"
-            "          `cases <n>`, `lem <prop>`, `refine <n>`, `sorry`\n"
+            "          `cases <n>`, `lem <prop>`, `refine <n>`\n"
             "- Hypotheses are numbered in the rendered output (for example `0: A`).\n"
             "- Status lines are on stderr (for example `-- new_count 1 sorry_count 0 goals_remaining 2`),\n"
             "  goals on stdout.\n"
@@ -177,7 +66,6 @@ class Client:
             "  - `lem P`: in classical mode only, add hypothesis `(P → ⊥) ∨ P`.\n"
             "  - `refine n`: in classical mode only, if hypothesis `n` is `A → B1` and goal is `B`,\n"
             "    produce goals `B1 → B` and `A`.\n"
-            "  - `sorry`: solve the current goal unconditionally.\n"
             "  - `new P`: push a fresh goal `P` onto the goal stack.\n"
         )
 
@@ -209,44 +97,26 @@ class Client:
         assert self._last is not None
         return self._last
 
-    def send(self, line: str) -> Step:
+    def new(self, new_goal: str) -> Step:
         if self._repl is None:
             raise RuntimeError("client not started; call start() first")
-
-        ok, msg = _tactic_is_valid_strict(line)
-        if not ok:
-            current_new_count = self._last.new_count if self._last is not None else None
-            current_sorry_count = self._last.sorry_count if self._last is not None else None
-            current_goals = self._last.goals_remaining if self._last is not None else None
-            self._last = Step(
-                out="",
-                err=f"python parse error: {msg}",
-                new_count=current_new_count,
-                sorry_count=current_sorry_count,
-                goals_remaining=current_goals,
-                all_goals_accomplished=self._last.all_goals_accomplished if self._last is not None else False,
-            )
-            return self._last
-
+        line = f"new {new_goal.strip()}"
         repl_step = self._repl.step(line)
         self._last = self._to_step(repl_step.out, repl_step.err)
         return self._last
 
-    def send_honest(self, line: str) -> Step:
-        if _is_forbidden_honest_tactic(line):
-            current_new_count = self._last.new_count if self._last is not None else None
-            current_sorry_count = self._last.sorry_count if self._last is not None else None
-            current_goals = self._last.goals_remaining if self._last is not None else None
-            self._last = Step(
-                out="",
-                err="honesty policy: `new` and `sorry` are not allowed in send_honest",
-                new_count=current_new_count,
-                sorry_count=current_sorry_count,
-                goals_remaining=current_goals,
-                all_goals_accomplished=self._last.all_goals_accomplished if self._last is not None else False,
-            )
-            return self._last
-        return self.send(line)
+    def step(self, tactic: str) -> Step:
+        if self._repl is None:
+            raise RuntimeError("client not started; call start() first")
+
+        s = tactic.strip()
+        lower = s.lower()
+        if ("new" in lower) or ("sorry" in lower):
+            raise RuntimeError("Client.step() honesty policy: `new` and `sorry` are not allowed")
+
+        repl_step = self._repl.step(s)
+        self._last = self._to_step(repl_step.out, repl_step.err)
+        return self._last
 
     def __enter__(self) -> "Client":
         self.start()
