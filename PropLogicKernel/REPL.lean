@@ -20,7 +20,7 @@ def REPL (classical_logic: Bool) (state: State) (inputLine: String): (State × S
   let prompt (s: State): String :=
     match s.stack with
       | [] => "-- all goals accomplished!"
-      | g :: _ => s!"-- current goals (1 / {s.stack.length})\n{g}"
+      | g :: _ => s!"-- goals remaining {s.stack.length}\n{g}"
 
   let inputLine := inputLine.trimAscii.toString
 
