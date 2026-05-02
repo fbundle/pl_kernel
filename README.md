@@ -94,7 +94,7 @@ Then the next step repeats forever.
 - `Client.send(line)`:
   - sends any supported REPL command, including `new` and `sorry`
 - `Client.send_honest(line)`:
-  - like `send`, but rejects `new ...` and `sorry`
+  - like `send`, but if `new` or `sorry` appears in the input line, it does not send the command and returns a `Step` with the policy message in `err`
 - `Client.init_prompt()`:
   - returns a human/AI-oriented summary of usage and tactic semantics
 

@@ -66,15 +66,16 @@ class Client:
             "  - `new P`: push a fresh goal `P` onto the goal stack.\n"
         )
 
-    def start(self) -> "Client":
+    def start(self) -> Step:
         if self._repl is not None:
-            return self
+            assert self._last is not None
+            return self._last
         if not self._exe.exists():
             raise FileNotFoundError(f"executable not found at {self._exe!s}; run `lake build` first")
         self._repl = Repl([str(self._exe)], cwd=str(self._cwd), prompt=self._prompt).start()
         last = self._repl.last()
         self._last = self._to_step(last.out, last.err)
-        return self
+        return self._last
 
     def close(self) -> None:
         if self._repl is None:
@@ -97,7 +98,14 @@ class Client:
 
     def send_honest(self, line: str) -> Step:
         if _is_forbidden_honest_tactic(line):
-            raise ValueError("send_honest does not allow `new` or `sorry`")
+            self.start()
+            current_goals = self._last.goals_remaining if self._last is not None else None
+            self._last = Step(
+                out="",
+                err="honesty policy: `new` and `sorry` are not allowed in send_honest",
+                goals_remaining=current_goals,
+            )
+            return self._last
         return self.send(line)
 
     def _to_step(self, out: str, err: str) -> Step:
