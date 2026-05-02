@@ -11,7 +11,7 @@ open PropLogicKernel.ListMap
 -- resolveTacticToGoal?
 -- apply tactic, return a new list of goals
 -- and a new count variable
-def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical : Bool): Except String (Nat × List (G α)) :=
+def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (cl : Bool): Except String (Nat × List (G α)) :=
   -- get h? if specified
   let h?: Option P :=
     let hName?: Option Nat :=
@@ -113,7 +113,7 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
     -- law of excluded middle
     -- add (A → False) ∨ A
     | (_, .lem A, _) =>
-      if classical then
+      if cl then
         Except.ok (count + 1, [{
           hyp := (Map.set g.hyp count (P.or (.imp A .fals) A)),
           goal := g.goal,
@@ -124,7 +124,7 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
     -- if goal is B and h: A1 → B1
     -- split into two goals A1 and (B1 → B)
     | (B, .refine _, some (.imp A1 B1)) =>
-      if classical then
+      if cl then
         Except.ok (count, [{
           hyp := g.hyp,
           goal := (.imp B1 B),
@@ -141,16 +141,9 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
     | (_, .sorr, _) =>
       Except.ok (count, [])
 
-    -- add a goal into the current state
-    | (_, .new C, _) =>
-      Except.ok (count, [g, {
-        hyp := (Map.empty Nat P: α),
-        goal := C,
-      }])
-
     | _ => Except.error s!"cannot resolve tactic {t}"
 
-def resolveTactic? [Map α Nat P] (s: S α) (t: T) (classical : Bool := False): Except String (S α) :=
+def resolveTactic? [Map α Nat P] (s: S α) (t: T) (cl : Bool := False): Except String (S α) :=
   match t with
     -- new tactic acts on empty set of goals
     -- add a goal into the current state
@@ -167,7 +160,7 @@ def resolveTactic? [Map α Nat P] (s: S α) (t: T) (classical : Bool := False): 
       match s.stack with
         | [] => Except.error s!"cannot resolve {t} into an empty set of goals"
         | g :: remainingGoals =>
-          match resolveTacticToGoal? s.count g t classical with
+          match resolveTacticToGoal? s.count g t cl with
             | Except.error msg => Except.error msg
             | Except.ok (newCount, newGoals) => Except.ok {
               count := newCount,
