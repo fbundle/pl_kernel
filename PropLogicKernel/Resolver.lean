@@ -127,10 +127,10 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
       if classical then
         Except.ok (count, [{
           hyp := g.hyp,
-          goal := A1,
+          goal := (.imp B1 B),
         }, {
           hyp := g.hyp,
-          goal := (.imp B1 B),
+          goal := A1,
         }])
       else
         Except.error s!"refine is only available in classical logic"
