@@ -11,7 +11,7 @@ open PropLogicKernel.ListMap
 -- resolveTacticToGoal?
 -- apply tactic, return a new list of goals
 -- and a new count variable
-def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except String (Nat × List (G α)) :=
+def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical : Bool := False): Except String (Nat × List (G α)) :=
   -- get h? if specified
   let h?: Option P :=
     let hName?: Option Nat :=
@@ -42,14 +42,18 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
           goal := A1,
         }])
       else
-        Except.ok (count + 1, [{
-          hyp := g.hyp,
-          goal := A1,
-        }, {
-          hyp := g.hyp,
-          goal := (.imp B1 B),
-        }])
-        -- Except.error s!"cannot apply {h?} into {B}"
+        if classical then
+          -- in classical logic, we allow to assume application (A1 → B1) into B
+          -- by adding a new goal B1 → B
+          Except.ok (count + 1, [{
+            hyp := g.hyp,
+            goal := A1,
+          }, {
+            hyp := g.hyp,
+            goal := (.imp B1 B),
+          }])
+        else
+          Except.error s!"cannot apply {h?} into {B}"
 
     -- if goal is A and h: A
     -- done
@@ -121,10 +125,13 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T): Except St
     -- law of excluded middle
     -- add (A → False) ∨ A
     | (_, .lem A, _) =>
-      Except.ok (count + 1, [{
-        hyp := (Map.set g.hyp count (P.or (.imp A .fals) A)),
-        goal := g.goal,
-      }])
+      if classical then
+        Except.ok (count + 1, [{
+          hyp := (Map.set g.hyp count (P.or (.imp A .fals) A)),
+          goal := g.goal,
+        }])
+      else
+        Except.error s!"lem is only available in classical logic"
 
     | _ => Except.error s!"cannot resolve tactic {t}"
 
