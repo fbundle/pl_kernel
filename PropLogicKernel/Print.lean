@@ -1,5 +1,10 @@
 import PropLogicKernel.Basic
 
+namespace PropLogicKernel.Print
+
+open PropLogicKernel.Basic
+open PropLogicKernel.ListMap
+
 def toStringProp (p: P): String :=
   match p with
     | .fals => "⊥"
@@ -72,3 +77,5 @@ def toStringGoal [Map α Nat P] (g: G α): String :=
 
 instance [Map α Nat P]: ToString (G α)  where
   toString := toStringGoal
+
+end PropLogicKernel.Print

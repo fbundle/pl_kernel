@@ -1,6 +1,13 @@
 import EchoLine.EchoLine
+import PropLogicKernel.Basic
+import PropLogicKernel.ListMap
 import PropLogicKernel.Resolve
-import PropLogicKernel.Parse
+import PropLogicKernel.Parser
+
+open PropLogicKernel.Basic
+open PropLogicKernel.ListMap
+open PropLogicKernel.Parser
+open PropLogicKernel.Resolve
 
 def parseTactic? (s: String): Option T :=
   match s.trimAscii.toString with
@@ -23,7 +30,7 @@ abbrev Goal := G (ListMap Nat P)
 
 def parseInputLine? (inputLine: String): Option (T ⊕ Goal) := do
   if inputLine.startsWith "new " then
-    let (p, _) := ← parseProp? (inputLine.drop 6).toString
+    let (p, _) := ← parseProp? (inputLine.drop 4).toString
     pure (Sum.inr {hyp := emptyList, goal := p})
   else
     let t := ← parseTactic? inputLine
@@ -48,7 +55,11 @@ def stateTransition (state: State) (inputLine: String): (State × String) :=
   match parseInputLine? inputLine.trimAscii.toString with
     | none => (state, "parse error, try again\n> ")
     | some (Sum.inr g) =>
-      ({count := state.count, stack := g :: state.stack}, "new goal added")
+      let newState: State := {
+        count := state.count,
+        stack := g :: state.stack,
+      }
+      (newState, "new goal added\n" ++ (prompt newState))
 
     | some (Sum.inl t) =>
       match resolveTactic? state t with

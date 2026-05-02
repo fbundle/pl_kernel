@@ -1,3 +1,5 @@
+namespace PropLogicKernel.ListMap
+
 
 class Map (ζ: Type u) (α: Type v) (β: Type w) [BEq α] where
   get? (z: ζ) (key: α): Option β
@@ -26,3 +28,6 @@ instance[BEq α]: Map (ListMap α β) α β  where
   iter := iter
 
 def emptyList [BEq α]: ListMap α β := []
+
+
+end PropLogicKernel.ListMap

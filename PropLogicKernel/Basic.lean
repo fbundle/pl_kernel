@@ -1,5 +1,8 @@
 import PropLogicKernel.ListMap
 
+namespace PropLogicKernel.Basic
+
+open PropLogicKernel.ListMap
 
 -- proposition
 inductive P where
@@ -57,4 +60,4 @@ def initState [Map α Nat P] (emptyList: α) (p: P) : S α :=
 
 
 
-def hello := "world"
+end PropLogicKernel.Basic

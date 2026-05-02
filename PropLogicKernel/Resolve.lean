@@ -1,6 +1,12 @@
 import PropLogicKernel.Basic
 import PropLogicKernel.Print
+import PropLogicKernel.ListMap
 
+namespace PropLogicKernel.Resolve
+
+open PropLogicKernel.Basic
+open PropLogicKernel.Print
+open PropLogicKernel.ListMap
 
 -- resolveTacticToGoal?
 -- apply tactic, return a new list of goals
@@ -158,3 +164,5 @@ def test : Unit → Nat :=
 
 
 -- #eval test
+
+end PropLogicKernel.Resolve
