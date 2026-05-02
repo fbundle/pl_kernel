@@ -1,4 +1,4 @@
-import EchoLine.EchoLine
+import REPL.REPL
 import PropLogicKernel.REPL
 
 
@@ -10,8 +10,8 @@ def classical_logic: Bool := True
 -- ((P → ⊥) → ⊥) → P -- need classical logic
 
 def main : IO UInt32 := do
-  let (state, prompt) := PropLogicKernel.REPL.init
-  let repl := PropLogicKernel.REPL.REPL classical_logic
+  let init := PropLogicKernel.REPL.init
+  let repl := PropLogicKernel.REPL.trans classical_logic
 
-  EchoLine.loop repl state prompt
+  REPL.run repl init
   return 0

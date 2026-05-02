@@ -3,7 +3,7 @@ version = "0.1.0"
 defaultTargets = ["Main.lean"]
 
 [[lean_lib]]
-name = "EchoLine"
+name = "REPL"
 
 [[lean_lib]]
 name = "PropLogicKernel"

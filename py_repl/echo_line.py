@@ -1,0 +1,159 @@
+from __future__ import annotations
+
+import os
+import selectors
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional, Sequence
+
+
+class EchoLineReplError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class Step:
+    delta: str
+    prompt: str
+
+
+class EchoLineRepl:
+    """
+    Generic Python client for the `EchoLine.loop` protocol.
+
+    EchoLine contract (see `EchoLine/EchoLine.lean`):
+    - On each step, the program prints `delta` to stdout (newline-terminated)
+    - Then prints `prompt` to stderr (no newline)
+    - Then waits for one input line on stdin
+    - The next step repeats
+
+    This client:
+    - writes one input line
+    - reads stdout/stderr until it observes the prompt bytes on stderr
+    - returns the stdout delta as a decoded string
+    """
+
+    def __init__(
+        self,
+        argv: Sequence[str | os.PathLike[str]],
+        *,
+        cwd: str | os.PathLike[str] | None = None,
+        prompt: str = "> ",
+        encoding: str = "utf-8",
+        read_timeout_s: float = 5.0,
+        env: Optional[dict[str, str]] = None,
+    ) -> None:
+        self._argv = [str(a) for a in argv]
+        self._cwd = str(Path(cwd)) if cwd is not None else None
+        self._prompt_str = prompt
+        self._prompt_bytes = prompt.encode(encoding)
+        self._encoding = encoding
+        self._read_timeout_s = float(read_timeout_s)
+        self._env = env
+
+        self._p: Optional[subprocess.Popen[bytes]] = None
+        self._last: Optional[Step] = None
+
+    def start(self) -> "EchoLineRepl":
+        if self._p is not None:
+            return self
+
+        self._p = subprocess.Popen(
+            self._argv,
+            cwd=self._cwd,
+            env=self._env,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=False,
+            bufsize=0,
+        )
+
+        delta = self._read_delta_until_prompt()
+        self._last = Step(delta=delta, prompt=self._prompt_str)
+        return self
+
+    def close(self) -> None:
+        if self._p is None:
+            return
+        try:
+            if self._p.stdin:
+                self._p.stdin.close()
+        finally:
+            self._p.terminate()
+            try:
+                self._p.wait(timeout=1.0)
+            except Exception:
+                self._p.kill()
+                self._p.wait(timeout=1.0)
+        self._p = None
+
+    def __enter__(self) -> "EchoLineRepl":
+        return self.start()
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self.close()
+
+    def last(self) -> Step:
+        if self._last is None:
+            self.start()
+        assert self._last is not None
+        return self._last
+
+    def send(self, line: str) -> Step:
+        self.start()
+        assert self._p is not None and self._p.stdin is not None
+
+        self._p.stdin.write((line.rstrip("\n") + "\n").encode(self._encoding))
+        self._p.stdin.flush()
+
+        delta = self._read_delta_until_prompt()
+        self._last = Step(delta=delta, prompt=self._prompt_str)
+        return self._last
+
+    # ---- internals ----
+
+    def _read_delta_until_prompt(self) -> str:
+        assert self._p is not None and self._p.stdout is not None and self._p.stderr is not None
+
+        out_buf = bytearray()
+        err_buf = bytearray()
+
+        sel = selectors.DefaultSelector()
+        sel.register(self._p.stdout, selectors.EVENT_READ)
+        sel.register(self._p.stderr, selectors.EVENT_READ)
+
+        try:
+            while True:
+                events = sel.select(timeout=self._read_timeout_s)
+                if not events:
+                    code = self._p.poll()
+                    if code is not None:
+                        raise EchoLineReplError(f"process terminated (exit_code={code})")
+                    continue
+
+                for key, _mask in events:
+                    chunk = os.read(key.fileobj.fileno(), 4096)
+                    if chunk == b"":
+                        code = self._p.poll()
+                        raise EchoLineReplError(f"process terminated (exit_code={code})")
+
+                    if key.fileobj is self._p.stdout:
+                        out_buf.extend(chunk)
+                    else:
+                        err_buf.extend(chunk)
+
+                    # Prompt is written to stderr.
+                    if self._prompt_bytes in err_buf:
+                        idx = err_buf.index(self._prompt_bytes)
+                        del err_buf[: idx + len(self._prompt_bytes)]
+                        return out_buf.decode(self._encoding, errors="replace").rstrip("\n")
+        finally:
+            for stream in (self._p.stdout, self._p.stderr):
+                try:
+                    sel.unregister(stream)
+                except Exception:
+                    pass
+            sel.close()
+
