@@ -70,7 +70,8 @@ def parseProp? (s : String) : Option P :=
   | some (p, _) => some p
 
 def parseTactic? (s: String): Option T :=
-  match s.trimAscii.toString with
+  let s := s.trimAscii.toString
+  match s with
   | "intro" => some T.intro
   | "constructor" => some T.constructor
   | "left" => some T.left

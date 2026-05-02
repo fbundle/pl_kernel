@@ -25,7 +25,6 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
       | none => none
       | some hName => Map.get? g.hyp hName
 
-  dbg_trace s!"----- {g.goal} {t} {h?}"
   match (g.goal, t, h?) with
     -- if goal is A → B
     -- add assumption h: A and change goal to B
@@ -152,14 +151,27 @@ def resolveTacticToGoal? [Map α Nat P] (count: Nat) (g: G α) (t: T) (classical
     | _ => Except.error s!"cannot resolve tactic {t}"
 
 def resolveTactic? [Map α Nat P] (s: S α) (t: T) (classical : Bool := False): Except String (S α) :=
-  match s.stack with
-    | [] => Except.error "empty list of goals"
-    | g :: remainingGoals =>
-      match resolveTacticToGoal? s.count g t classical with
-        | Except.error msg => Except.error msg
-        | Except.ok (newCount, newGoals) => Except.ok {
-          count := newCount,
-          stack := newGoals ++ remainingGoals,
-        }
+  match t with
+    -- new tactic acts on empty set of goals
+    -- add a goal into the current state
+    | .new C => Except.ok {
+      count := s.count,
+      stack := {
+        hyp := (Map.empty Nat P: α),
+        goal := C,
+      } :: s.stack,
+    }
+
+    -- other tactics acts on a goal and might return multiple goals
+    | _ =>
+      match s.stack with
+        | [] => Except.error s!"cannot resolve {t} into an empty set of goals"
+        | g :: remainingGoals =>
+          match resolveTacticToGoal? s.count g t classical with
+            | Except.error msg => Except.error msg
+            | Except.ok (newCount, newGoals) => Except.ok {
+              count := newCount,
+              stack := newGoals ++ remainingGoals,
+            }
 
 end PropLogicKernel.Resolver
