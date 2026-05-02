@@ -1,5 +1,6 @@
 import EchoLine.EchoLine
 import PropLogicKernel.Resolve
+import PropLogicKernel.Parse
 
 def parseTactic? (s: String): Option T :=
   match s.trimAscii.toString with
@@ -18,6 +19,16 @@ def parseTactic? (s: String): Option T :=
     else
       none
 
+abbrev Goal := G (ListMap Nat P)
+
+def parseInputLine? (inputLine: String): Option (T ⊕ Goal) := do
+  if inputLine.startsWith "new " then
+    let (p, _) := ← parseProp? (inputLine.drop 6).toString
+    pure (Sum.inr {hyp := emptyList, goal := p})
+  else
+    let t := ← parseTactic? inputLine
+    pure (Sum.inl t)
+
 abbrev State := S (ListMap Nat P)
 
 def prompt (s: State): String :=
@@ -33,14 +44,16 @@ def s0: State := {
 -- def p0: String := "type `new <goal>` to add new goal\n> "
 def p0: String := prompt s0
 
-def stateTransition (state: State) (inputLine: String): (State × String × Bool) :=
-  let t?: Option T := parseTactic? inputLine.trimAscii.toString
-  match t? with
-    | none => (state, "parse error, try again", true)
-    | some t =>
+def stateTransition (state: State) (inputLine: String): (State × String) :=
+  match parseInputLine? inputLine.trimAscii.toString with
+    | none => (state, "parse error, try again\n> ")
+    | some (Sum.inr g) =>
+      ({count := state.count, stack := g :: state.stack}, "new goal added")
+
+    | some (Sum.inl t) =>
       match resolveTactic? state t with
-        | Except.error msg => (state, msg, true)
-        | Except.ok newState => (newState, prompt newState, true)
+        | Except.error msg => (state, msg ++ "\n> ")
+        | Except.ok newState => (newState, prompt newState)
 
 def andMany (ps: List P) (last: P): P :=
   match ps with
@@ -65,6 +78,6 @@ def main : IO UInt32 := do
       -- (.imp (.and A B) (.and B A))
       -- (.imp (.and (.imp A B) (.imp B .fals)) (.imp A .fals))
       (impMany [A, (.imp A B), (.imp A C), (.imp (.or B C) D)] D)
-  EchoLine.loop stateTransition s (prompt s) true
+  EchoLine.loop stateTransition s (prompt s)
   IO.println "Goodbye!"
   return 0
