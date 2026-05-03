@@ -156,7 +156,7 @@ Parse/resolution errors do not automatically force exit code `1`; they preserve 
 
 ## DISCLAIMER: AI GENERATED CODE
 
-The following files were written by Cursor:
+The following files were written by Cursor and Claude:
 
 - `README.md`
 - All Python code in this repo (for example: `py_prop_logic_kernel/`)
