@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import random
 from multiprocessing import Process, Queue
 import sys
 from pathlib import Path
@@ -115,6 +116,9 @@ def main() -> None:
     for fp, key in zip(file_strs, keys, strict=True):
         if key not in done:
             pending.append((fp, key))
+
+    # Mix order so per-puzzle time isn’t correlated with path (smoother tqdm rate / ETA).
+    random.shuffle(pending)
 
     jobs = max(1, int(args.jobs))
 
