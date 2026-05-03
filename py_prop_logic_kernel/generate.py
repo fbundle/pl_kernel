@@ -308,19 +308,28 @@ def _prove_proposition(
         return _prove_proposition(ante, hyp, next_id, tactics, rng, fuel - 1)
     if isinstance(goal, And):
         tactics.append("constructor")
-        if rng.random() < 0.5:
-            return _prove_proposition(goal.left, hyp, next_id, tactics, rng, fuel - 1) and _prove_proposition(
-                goal.right, hyp, next_id, tactics, rng, fuel - 1
-            )
-        return _prove_proposition(goal.right, hyp, next_id, tactics, rng, fuel - 1) and _prove_proposition(
-            goal.left, hyp, next_id, tactics, rng, fuel - 1
+        # Kernel stacks the left conjunct before the right (`Resolver`: A then B). Proving out of
+        # order emits `left`/`right`/… against the wrong goal and fails (e.g. "cannot resolve right").
+        return _prove_proposition(goal.left, hyp, next_id, tactics, rng, fuel - 1) and _prove_proposition(
+            goal.right, hyp, next_id, tactics, rng, fuel - 1
         )
     if isinstance(goal, Or):
+        # Try one disjunct, then the other (isolated `next_id` / tactics) so a dead `left` path
+        # does not poison state — random order keeps proof variety.
+        snap = next_id[0]
         if rng.random() < 0.5:
-            tactics.append("left")
-            return _prove_proposition(goal.left, hyp, next_id, tactics, rng, fuel - 1)
-        tactics.append("right")
-        return _prove_proposition(goal.right, hyp, next_id, tactics, rng, fuel - 1)
+            branches: tuple[tuple[str, Prop], ...] = (("left", goal.left), ("right", goal.right))
+        else:
+            branches = (("right", goal.right), ("left", goal.left))
+        for name, sub in branches:
+            t_try: list[str] = []
+            n_try = [snap]
+            if _prove_proposition(sub, dict(hyp), n_try, t_try, rng, fuel - 1):
+                tactics.append(name)
+                tactics.extend(t_try)
+                next_id[0] = n_try[0]
+                return True
+        return False
     if isinstance(goal, Imp):
         tactics.append("intro")
         idx = next_id[0]
