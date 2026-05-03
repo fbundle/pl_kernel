@@ -15,7 +15,7 @@ Tactic -- a rule to change state
 -- proposition
 inductive P where
   | fals: P
-  | atom (name: String): P
+  | var (name: String): P
   | and (this: P) (that: P): P
   | or (this: P) (that: P): P
   | imp (this: P) (that: P): P

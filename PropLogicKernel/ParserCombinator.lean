@@ -1,19 +1,6 @@
 import PropLogicKernel.Basic
 
-namespace PropLogicKernel.Parser
-
-open PropLogicKernel.Basic
-
-/--
-Imp  ::= Or ("->" Imp)?        // right
-Or   ::= And ("∨" Or)?         // right
-And  ::= Not ("∧" And)?        // right
-Not  ::= "¬" Not | Atom
-Atom ::= variable | "(" Imp ")"
-
-
---/
-
+namespace PropLogicKernel.ParserCombinator
 
 
 def ParseFunc α := List Char → Option (α × List Char)
@@ -23,7 +10,7 @@ def parseConcat (p1: ParseFunc α) (p2: ParseFunc β) (xs: List Char): Option ((
   let (b, xs) ← p2 xs
   return ((a, b), xs)
 
-infix:60 " ++ " => parseConcat
+infixr:60 " ++ " => parseConcat
 
 def parseEither (p1: ParseFunc α) (p2: ParseFunc α) (xs: List Char): Option (α × List Char) := do
   match p1 xs with
@@ -33,7 +20,7 @@ def parseEither (p1: ParseFunc α) (p2: ParseFunc α) (xs: List Char): Option (�
         | some (a2, xs) => some (a2, xs)
         | none => none
 
-infix:50 " || " => parseEither
+infixr:50 " || " => parseEither
 
 def parseMap (p: ParseFunc α) (m: α → β) (xs: List Char): Option (β × List Char) := do
   let (a, xs) ← p xs
@@ -70,6 +57,23 @@ partial def parseMany (p: ParseFunc α) (xs: List Char): Option (List α × List
         loop (ys.push y) newXs
   loop #[] xs
 
+
+end PropLogicKernel.ParserCombinator
+
+
+-- grammar (not left recursive)
+
+-- Imp  ::= Or ("->" Imp)?        // right
+-- Or   ::= And ("∨" Or)?         // right
+-- And  ::= Not ("∧" And)?        // right
+-- Not  ::= "¬" Not | Atom
+-- Atom ::= variable | "(" Imp ")"
+
+namespace PropLogicKernel.Parser
+
+open PropLogicKernel.ParserCombinator
+open PropLogicKernel.Basic
+
 def parseName (xs: List Char): Option (String × List Char) :=
   let chList: List Char := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".toList
   let pList: List (ParseFunc Char) := chList.map parseChar
@@ -81,7 +85,29 @@ def parseName (xs: List Char): Option (String × List Char) :=
 
   p3 xs
 
+mutual
 
+def parseVar (xs: List Char): Option (P × List Char) := do
+  let (name, xs) ← parseName xs
+  return (P.var name, xs)
+
+def parseImpWithParens (xs: List Char): Option (P × List Char) := do
+  let ((_, p, _), xs)← ((parseChar '(') ++ parseImp ++ (parseChar ')')) xs
+  return (p, xs)
+
+def parseAtom (xs: List Char): Option (P × List Char) :=
+  sorry
+
+
+def parseNot (xs: List Char): Option (P × List Char) :=
+  let x := (parseChar '¬') ++ parseNot
+
+  sorry
+
+def parseImp (xs: List Char): Option (P × List Char) :=
+  sorry
+
+end
 
 
 

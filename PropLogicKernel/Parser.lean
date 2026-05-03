@@ -64,7 +64,7 @@ mutual
       if isAtomChar c then
         let all := c :: rest
         let idChars := all.takeWhile isAtomChar
-        some (P.atom (String.ofList idChars), all.drop idChars.length)
+        some (P.var (String.ofList idChars), all.drop idChars.length)
       else
         none
 end

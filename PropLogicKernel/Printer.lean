@@ -9,7 +9,7 @@ open PropLogicKernel.ListMap
 def toStringProp (p: P): String :=
   match p with
     | .fals => "⊥"
-    | .atom name => name
+    | .var name => name
     | .and this that => s!"({toStringProp this} ∧ {toStringProp that})"
     | .or this that => s!"({toStringProp this} ∨ {toStringProp that})"
     | .imp this that => s!"({toStringProp this} → {toStringProp that})"
@@ -23,7 +23,7 @@ def toStringProp (p: P) (parent: Option P := none) (strict: Bool := False): Stri
       | some p =>
         match p with
           | .fals => 0
-          | .atom _ => 0
+          | .var _ => 0
           | .and _ _ => 1
           | .or _ _ => 2
           | .imp _ _ => 3
@@ -44,7 +44,7 @@ def toStringProp (p: P) (parent: Option P := none) (strict: Bool := False): Stri
 
   match p with
     | .fals => "⊥"
-    | .atom name => name
+    | .var name => name
     | .and this that => addOptionalParens s!"{toStringProp this p true} ∧ {toStringProp that p false}"
     | .or this that => addOptionalParens s!"{toStringProp this p true} ∨ {toStringProp that p false}"
     | .imp this that => addOptionalParens s!"{toStringProp this p true} → {toStringProp that p false}"
@@ -53,8 +53,8 @@ def toStringProp (p: P) (parent: Option P := none) (strict: Bool := False): Stri
 instance: ToString P where
   toString := toStringProp
 
-#eval (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
-#eval toStringProp (P.imp (P.or (P.and (P.atom "P") (P.atom "Q")) (P.atom "R")) (P.and (P.atom "P") (P.or (P.atom "Q") (P.atom "R"))))
+#eval (P.imp (P.or (P.and (P.var "P") (P.var "Q")) (P.var "R")) (P.and (P.var "P") (P.or (P.var "Q") (P.var "R"))))
+#eval toStringProp (P.imp (P.or (P.and (P.var "P") (P.var "Q")) (P.var "R")) (P.and (P.var "P") (P.or (P.var "Q") (P.var "R"))))
 
 def toStringTactic (t: T): String :=
   match t with
