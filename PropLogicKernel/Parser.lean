@@ -60,7 +60,7 @@ end PropLogicKernel.ParserCombinator
 -- Or   ::= And ("∨" Or)?         // right
 -- And  ::= Not ("∧" And)?        // right
 -- Not  ::= "¬" Not | Atom
--- Atom ::= Var | "(" Imp ")"
+-- Atom ::= Var | ⊥ | "(" Imp ")"
 
 namespace PropLogicKernel.Parser
 
