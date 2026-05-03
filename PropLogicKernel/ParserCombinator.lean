@@ -101,6 +101,7 @@ partial def parseAtom: ParsePropFunc := parseVar || parseImpWithParens
 -- Not  ::= "¬" Not | Atom
 partial def parseNot: ParsePropFunc := parseMap ((parseChar '¬') ++ parseNot) (λ (_, p) => P.imp p P.fals) || parseAtom
 
+-- And  ::= Not ("∧" And)?
 
 
 partial def parseImp (xs: List Char): Option (P × List Char) :=
