@@ -48,7 +48,7 @@ def parseChar (ch: Char) (xs: List Char): Option (Char × List Char) :=
       else
         none
 
-partial def parseMany (p: ParseFunc α) (xs: List Char): Option (List α × List Char) :=
+partial def listParseFunc (p: ParseFunc α) (xs: List Char): Option (List α × List Char) :=
   let rec loop (ys: Array α) (xs: List Char): Option (List α × List Char) :=
     match p xs with
       | none => some (ys.toList, xs)
@@ -82,7 +82,7 @@ def parseName (xs: List Char): Option (String × List Char) :=
   -- p1: parse any characters in chList
   let p1: ParseFunc Char := pList.foldl eitherParseFunc parseFail
   -- p2:
-  let p2: ParseFunc (List Char) := parseMany p1
+  let p2: ParseFunc (List Char) := listParseFunc p1
   let p3: ParseFunc String := mapParseFunc p2 String.ofList
 
   p3 xs
@@ -103,9 +103,16 @@ partial def parseNot: ParsePropFunc := mapParseFunc ((parseChar '¬') ++ parseNo
 
 -- And  ::= Not ("∧" And)?
 partial def parseAnd (xs: List Char): Option (P × List Char) := do
+  let rightP := mapParseFunc ((parseChar '∧') ++ parseAnd) (λ (_, p) => p)
   let (left, xs) ← parseNot xs
-  let x := mapParseFunc ((parseChar '∧') ++ parseAnd) (λ (_, p) => p)
-  sorry
+  let (rightList, xs) ← (listParseFunc rightP) xs
+
+  let rec makeAnd (left: P) (rightList: List P): P :=
+    match rightList with
+      | [] => left
+      | p :: rest => P.and left (makeAnd p rest)
+
+  return (makeAnd left rightList, xs)
 
 
 partial def parseImp (xs: List Char): Option (P × List Char) :=
