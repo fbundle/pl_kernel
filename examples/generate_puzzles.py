@@ -25,24 +25,61 @@ def _write_puzzle_file(path: Path, puzzle: Puzzle) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _puzzle_filename(puzzle: Puzzle) -> str:
+    """Derive filename from the statement hash embedded in puzzle.settings."""
+    sha = puzzle.settings.get("statement_sha256_16", "") if puzzle.settings else ""
+    return f"puzzle_{sha}.txt"
+
+
+def _count_existing(out_config_dir: Path) -> int:
+    """Count puzzle files already written in this config directory."""
+    return len(list(out_config_dir.glob("puzzle_*.txt")))
+
+
 def _write_examples(
-    out_config_dir: Path, *, num_vars: int, depth: int, n: int, kernel_exe: Path | None, show_progress: bool
-) -> None:
+    out_config_dir: Path,
+    *,
+    num_vars: int,
+    depth: int,
+    n: int,
+    kernel_exe: Path | None,
+    show_progress: bool,
+) -> int:
+    """
+    Generate up to `n` puzzles into `out_config_dir`.
+
+    Skips generation entirely if the directory already contains >= n puzzle files
+    (resumable: safe to re-run after an interrupted job).
+
+    Returns the number of puzzles newly written.
+    """
     out_config_dir.mkdir(parents=True, exist_ok=True)
 
+    already = _count_existing(out_config_dir)
+    remaining = n - already
+    if remaining <= 0:
+        return 0
+
+    written = 0
     with Client(exe=kernel_exe) if kernel_exe is not None else _NullCtx() as c:
-        it = range(n)
+        it = range(remaining)
         if show_progress:
             it = tqdm(it, desc=f"num_vars={num_vars} depth={depth}", leave=False)
         for i in it:
-            seed = num_vars * 1_000_000 + depth * 1_000 + i
+            # Offset seed by `already` so resumed runs don't regenerate the same puzzles.
+            seed = num_vars * 1_000_000 + depth * 1_000 + already + i
             puzzle = generate_puzzle(GenerateSettings(num_vars=num_vars, depth=depth, seed=seed))
-            out_path = out_config_dir / f"{i + 1:04d}.txt"
-            _write_puzzle_file(out_path, puzzle)
+            out_path = out_config_dir / _puzzle_filename(puzzle)
+            # Skip if this exact statement was already written (hash collision guard).
+            if not out_path.exists():
+                _write_puzzle_file(out_path, puzzle)
+                written += 1
 
             if kernel_exe is not None:
                 assert isinstance(c, Client)
                 c.check(puzzle)
+
+    return written
 
 
 class _NullCtx:
@@ -53,13 +90,15 @@ class _NullCtx:
         return False
 
 
-def _worker_generate_one(args: tuple[str, int, int, int, str | None]) -> tuple[int, int]:
+def _worker_generate_one(args: tuple[str, int, int, int, str | None]) -> tuple[int, int, int]:
     out_dir_s, num_vars, depth, n, kernel_exe_s = args
     out_dir = Path(out_dir_s)
     out_config_dir = out_dir / f"example_num_vars{num_vars}_depth{depth}"
     kernel_exe = Path(kernel_exe_s) if kernel_exe_s is not None else None
-    _write_examples(out_config_dir, num_vars=num_vars, depth=depth, n=n, kernel_exe=kernel_exe, show_progress=True)
-    return (num_vars, depth)
+    written = _write_examples(
+        out_config_dir, num_vars=num_vars, depth=depth, n=n, kernel_exe=kernel_exe, show_progress=False
+    )
+    return (num_vars, depth, written)
 
 
 def main() -> None:
@@ -106,7 +145,11 @@ def main() -> None:
         num_vars = args.num_vars if args.num_vars is not None else min_vars
         depth = args.depth if args.depth is not None else min_depth
         out_config_dir = out_dir / f"example_num_vars{num_vars}_depth{depth}"
-        print(f"writing {out_config_dir}/0001.txt.. (num_vars={num_vars}, depth={depth}, n={examples_per_config})")
+        already = _count_existing(out_config_dir)
+        if already >= examples_per_config:
+            print(f"skipping num_vars={num_vars} depth={depth}: already have {already} puzzles")
+            return
+        print(f"writing to {out_config_dir}/ (num_vars={num_vars}, depth={depth}, have={already}, target={examples_per_config})")
         _write_examples(
             out_config_dir,
             num_vars=num_vars,
@@ -129,15 +172,20 @@ def main() -> None:
     if jobs == 1:
         for nv, d in tqdm(configs, desc="configs"):
             out_config_dir = out_dir / f"example_num_vars{nv}_depth{d}"
-            print(f"writing {out_config_dir}/0001.txt.. (num_vars={nv}, depth={d}, n={examples_per_config})")
-            _write_examples(out_config_dir, num_vars=nv, depth=d, n=examples_per_config, kernel_exe=kernel_exe, show_progress=True)
+            already = _count_existing(out_config_dir)
+            if already >= examples_per_config:
+                continue
+            print(f"writing to {out_config_dir}/ (have={already}, target={examples_per_config})")
+            _write_examples(
+                out_config_dir, num_vars=nv, depth=d, n=examples_per_config,
+                kernel_exe=kernel_exe, show_progress=True,
+            )
         return
 
     with Pool(processes=jobs) as pool:
-        # Use `imap` (ordered) so results are yielded in the same (depth-sorted) order.
-        for nv, d in tqdm(pool.imap(_worker_generate_one, work), total=len(work), desc="configs"):
-            # keep a little human-readable trace alongside tqdm
-            print(f"done num_vars={nv} depth={d}")
+        for nv, d, written in tqdm(pool.imap(_worker_generate_one, work), total=len(work), desc="configs"):
+            if written > 0:
+                print(f"done num_vars={nv} depth={d} (+{written} new)")
 
 
 if __name__ == "__main__":
