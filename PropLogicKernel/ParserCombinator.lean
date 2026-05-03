@@ -1,14 +1,15 @@
 import PropLogicKernel.Basic
+import PropLogicKernel.Printer
 
 namespace PropLogicKernel.ParserCombinator
 
 
 def ParseFunc α := List Char → Option (α × List Char)
 
-def concatParseFunc (p1: ParseFunc α) (p2: ParseFunc β) (xs: List Char): Option ((α × β) × List Char) := do
-  let (a, xs) ← p1 xs
-  let (b, xs) ← p2 xs
-  return ((a, b), xs)
+def concatParseFunc (p1: ParseFunc α) (p2: ParseFunc β) (xs1: List Char): Option ((α × β) × List Char) := do
+  let (a, xs2) ← p1 xs1
+  let (b, xs3) ← p2 xs2
+  return ((a, b), xs3)
 
 infixr:60 " ++ " => concatParseFunc
 
@@ -52,9 +53,9 @@ partial def listParseFunc (p: ParseFunc α) (xs: List Char): Option (List α × 
   let rec loop (ys: Array α) (xs: List Char): Option (List α × List Char) :=
     match p xs with
       | none => some (ys.toList, xs)
-      | some (y, newXs) =>
-        assert! newXs.length < xs.length
-        loop (ys.push y) newXs
+      | some (y, xs1) =>
+        assert! xs1.length < xs.length
+        loop (ys.push y) xs1
   loop #[] xs
 
 
@@ -135,9 +136,15 @@ partial def parseImp: ParsePropFunc := makeRightAssocParseFunc parseOr '→' (ma
 
 end
 
-def parseProp? := parseImp
+def parseProp? (input: String): Option P := do
+  let chList := input.toList.filter (λ x => ¬ x.isWhitespace)
+  let (p, _) ← parseImp chList
+  return p
 
 
-
+#eval parseProp? "A ∧ B → B ∧ A"
+#eval parseProp? "(A → B) ∧ ¬ B → ¬ A"
+#eval parseProp? "A → (A → B) → (A → C) → (B ∨ C → D) → D"
+#eval parseProp? "¬¬P → P"
 
 end PropLogicKernel.Parser
