@@ -90,7 +90,7 @@ def main() -> None:
     parser.add_argument(
         "--results-csv",
         type=str,
-        default=str(_repo_root() / "output" / "check_results.csv"),
+        default=str(_repo_root() / "output" / "prop_logic_puzzle" / "check_results.csv"),
         help="CSV with columns file,correct — rows already present are skipped (resume).",
     )
     args = parser.parse_args()
