@@ -26,13 +26,11 @@ def _write_puzzle_file(path: Path, puzzle: Puzzle) -> None:
 
 
 def _puzzle_filename(puzzle: Puzzle) -> str:
-    """Derive filename from the statement hash embedded in puzzle.settings."""
     sha = puzzle.settings.get("statement_sha256_16", "") if puzzle.settings else ""
     return f"puzzle_{sha}.txt"
 
 
 def _count_existing(out_config_dir: Path) -> int:
-    """Count puzzle files already written in this config directory."""
     return len(list(out_config_dir.glob("puzzle_*.txt")))
 
 
@@ -45,14 +43,6 @@ def _write_examples(
     kernel_exe: Path | None,
     show_progress: bool,
 ) -> int:
-    """
-    Generate up to `n` puzzles into `out_config_dir`.
-
-    Skips generation entirely if the directory already contains >= n puzzle files
-    (resumable: safe to re-run after an interrupted job).
-
-    Returns the number of puzzles newly written.
-    """
     out_config_dir.mkdir(parents=True, exist_ok=True)
 
     already = _count_existing(out_config_dir)
@@ -64,13 +54,11 @@ def _write_examples(
     with Client(exe=kernel_exe) if kernel_exe is not None else _NullCtx() as c:
         it = range(remaining)
         if show_progress:
-            it = tqdm(it, desc=f"num_vars={num_vars} depth={depth}", leave=False)
+            it = tqdm(it, desc=f"nv={num_vars} d={depth}", leave=False)
         for i in it:
-            # Offset seed by `already` so resumed runs don't regenerate the same puzzles.
             seed = num_vars * 1_000_000 + depth * 1_000 + already + i
             puzzle = generate_puzzle(GenerateSettings(num_vars=num_vars, depth=depth, seed=seed))
             out_path = out_config_dir / _puzzle_filename(puzzle)
-            # Skip if this exact statement was already written (hash collision guard).
             if not out_path.exists():
                 _write_puzzle_file(out_path, puzzle)
                 written += 1
@@ -90,15 +78,24 @@ class _NullCtx:
         return False
 
 
-def _worker_generate_one(args: tuple[str, int, int, int, str | None]) -> tuple[int, int, int]:
-    out_dir_s, num_vars, depth, n, kernel_exe_s = args
-    out_dir = Path(out_dir_s)
-    out_config_dir = out_dir / f"example_num_vars{num_vars}_depth{depth}"
+def _worker_generate_one_puzzle(args: tuple[str, int, int, int, int, str | None]) -> bool:
+    """Generate a single puzzle. Returns True if a new file was written."""
+    out_dir_s, num_vars, depth, seed, already, kernel_exe_s = args
+    out_config_dir = Path(out_dir_s) / f"example_num_vars{num_vars}_depth{depth}"
+    out_config_dir.mkdir(parents=True, exist_ok=True)
     kernel_exe = Path(kernel_exe_s) if kernel_exe_s is not None else None
-    written = _write_examples(
-        out_config_dir, num_vars=num_vars, depth=depth, n=n, kernel_exe=kernel_exe, show_progress=False
-    )
-    return (num_vars, depth, written)
+
+    puzzle = generate_puzzle(GenerateSettings(num_vars=num_vars, depth=depth, seed=seed))
+    out_path = out_config_dir / _puzzle_filename(puzzle)
+    if out_path.exists():
+        return False
+    _write_puzzle_file(out_path, puzzle)
+
+    if kernel_exe is not None:
+        with Client(exe=kernel_exe) as c:
+            c.check(puzzle)
+
+    return True
 
 
 def main() -> None:
@@ -125,67 +122,56 @@ def main() -> None:
         help="Path to kernel executable (default: .lake/build/bin/Main-lean).",
     )
     parser.add_argument("--kernel-timeout-s", type=float, default=60.0)
-    parser.add_argument(
-        "--num-vars",
-        type=int,
-        default=None,
-        help="If set, only generate this single num_vars config.",
-    )
-    parser.add_argument("--depth", type=int, default=None, help="If set, only generate this single depth.")
+    parser.add_argument("--num-vars", type=int, default=None)
+    parser.add_argument("--depth", type=int, default=None)
     args = parser.parse_args()
 
     min_vars, max_vars = args.min_vars, args.max_vars
     min_depth, max_depth = args.min_depth, args.max_depth
-    examples_per_config = args.examples_per_config
+    n = args.examples_per_config
     exe = Path(args.kernel_exe) if args.kernel_exe is not None else (cwd / ".lake" / "build" / "bin" / "Main-lean")
     kernel_exe = exe if args.check_kernel else None
+    kernel_exe_s = str(kernel_exe) if kernel_exe is not None else None
     jobs = max(1, int(args.jobs))
 
+    # Build the flat list of (num_vars, depth) configs to cover.
     if args.num_vars is not None or args.depth is not None:
-        num_vars = args.num_vars if args.num_vars is not None else min_vars
-        depth = args.depth if args.depth is not None else min_depth
-        out_config_dir = out_dir / f"example_num_vars{num_vars}_depth{depth}"
-        already = _count_existing(out_config_dir)
-        if already >= examples_per_config:
-            print(f"skipping num_vars={num_vars} depth={depth}: already have {already} puzzles")
-            return
-        print(f"writing to {out_config_dir}/ (num_vars={num_vars}, depth={depth}, have={already}, target={examples_per_config})")
-        _write_examples(
-            out_config_dir,
-            num_vars=num_vars,
-            depth=depth,
-            n=examples_per_config,
-            kernel_exe=kernel_exe,
-            show_progress=True,
+        configs = [(
+            args.num_vars if args.num_vars is not None else min_vars,
+            args.depth if args.depth is not None else min_depth,
+        )]
+    else:
+        configs = sorted(
+            ((nv, d) for d in range(min_depth, max_depth + 1) for nv in range(min_vars, max_vars + 1)),
+            key=lambda x: (x[1], x[0]),
         )
+
+    # Expand configs into individual puzzle tasks, skipping already-complete configs.
+    work: list[tuple[str, int, int, int, int, str | None]] = []
+    for nv, d in configs:
+        out_config_dir = out_dir / f"example_num_vars{nv}_depth{d}"
+        already = _count_existing(out_config_dir)
+        remaining = n - already
+        if remaining <= 0:
+            continue
+        for i in range(remaining):
+            seed = nv * 1_000_000 + d * 1_000 + already + i
+            work.append((str(out_dir), nv, d, seed, already, kernel_exe_s))
+
+    if not work:
+        print("Nothing to do — all configs already have enough puzzles.")
         return
 
-    # Schedule work from smallest depth -> largest depth (then num_vars),
-    # so the job order is deterministic even under parallelism.
-    configs = sorted(
-        ((nv, d) for d in range(min_depth, max_depth + 1) for nv in range(min_vars, max_vars + 1)),
-        key=lambda x: (x[1], x[0]),
-    )
-    kernel_exe_s = str(kernel_exe) if kernel_exe is not None else None
-    work = [(str(out_dir), nv, d, examples_per_config, kernel_exe_s) for (nv, d) in configs]
+    print(f"Generating {len(work)} puzzles across {len(configs)} configs ({jobs} workers).")
 
     if jobs == 1:
-        for nv, d in tqdm(configs, desc="configs"):
-            out_config_dir = out_dir / f"example_num_vars{nv}_depth{d}"
-            already = _count_existing(out_config_dir)
-            if already >= examples_per_config:
-                continue
-            print(f"writing to {out_config_dir}/ (have={already}, target={examples_per_config})")
-            _write_examples(
-                out_config_dir, num_vars=nv, depth=d, n=examples_per_config,
-                kernel_exe=kernel_exe, show_progress=True,
-            )
-        return
-
-    with Pool(processes=jobs) as pool:
-        for nv, d, written in tqdm(pool.imap(_worker_generate_one, work), total=len(work), desc="configs"):
-            if written > 0:
-                print(f"done num_vars={nv} depth={d} (+{written} new)")
+        for w in tqdm(work, desc="puzzles"):
+            _worker_generate_one_puzzle(w)
+    else:
+        with Pool(processes=jobs) as pool:
+            for _ in tqdm(pool.imap_unordered(_worker_generate_one_puzzle, work),
+                          total=len(work), desc="puzzles"):
+                pass
 
 
 if __name__ == "__main__":
