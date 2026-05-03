@@ -16,10 +16,7 @@ infixr:60 " ++ " => concatParseFunc
 def eitherParseFunc (p1: ParseFunc α) (p2: ParseFunc α) (xs: List Char): Option (α × List Char) := do
   match p1 xs with
     | some (a1, xs) => some (a1, xs)
-    | none =>
-      match p2 xs with
-        | some (a2, xs) => some (a2, xs)
-        | none => none
+    | none => p2 xs
 
 infixr:50 " || " => eitherParseFunc
 
@@ -121,7 +118,6 @@ partial def parseAnd: ParsePropFunc := makeRightAssocParseFunc parseNot '∧' (m
 
 -- Or   ::= And ("∨" Or)?
 partial def parseOr: ParsePropFunc := makeRightAssocParseFunc parseAnd '∨' (makeRightAssocF P.or)
-
 
 -- Imp  ::= Or ("→" Imp)?
 partial def parseImp: ParsePropFunc := makeRightAssocParseFunc parseOr '→' (makeRightAssocF P.imp)
