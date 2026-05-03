@@ -76,9 +76,9 @@ class Imp(Prop):
 @dataclass(frozen=True)
 class GenerateSettings:
     """
-    Two difficulty knobs:
-    - `num_vars`: how many distinct atom names are available (A, B, C, ...)
-    - `depth`: how deep the goal expression can nest (`∧`/`∨`) and how many `intro`s we add
+    - `num_vars`: distinct atom names (A, B, C, …) available in the puzzle.
+    - `depth`: upper bound on recursion when growing the goal; actual shape is random (unbalanced
+      ∧/∨ trees). The number of `intro`s is also random up to a cap derived from this and `num_vars`.
     """
 
     num_vars: int = 4
@@ -92,11 +92,14 @@ def _vars(num_vars: int) -> list[str]:
     return base if base else ["A"]
 
 
-def _gen_goal(rng: random.Random, leaves: list[str], depth: int) -> Prop:
-    if depth <= 0 or rng.random() < 0.35:
+def _gen_goal(rng: random.Random, leaves: list[str], depth: int, leaf_p: float) -> Prop:
+    if depth <= 0 or rng.random() < leaf_p:
         return Atom(rng.choice(leaves))
     ctor = rng.choice([And, Or])
-    return ctor(_gen_goal(rng, leaves, depth - 1), _gen_goal(rng, leaves, depth - 1))
+    # Unbalanced splits ⇒ many more shapes than full binary trees of fixed height.
+    dl = rng.randint(0, depth - 1)
+    dr = rng.randint(0, depth - 1)
+    return ctor(_gen_goal(rng, leaves, dl, leaf_p), _gen_goal(rng, leaves, dr, leaf_p))
 
 
 def _build_statement(assumptions: list[str], goal: Prop) -> Prop:
@@ -131,13 +134,16 @@ def generate_puzzle(settings: GenerateSettings = GenerateSettings()) -> Puzzle:
     rng = random.Random(settings.seed)
     atoms = _vars(settings.num_vars)
 
-    # More depth => more assumptions + deeper ∧/∨ goal.
-    num_assumptions = max(1, min(len(atoms), (settings.depth + 1) // 2))
+    # Random count + shuffle ⇒ varied antecedents (not a fixed function of depth only).
+    cap = min(len(atoms), max(1, settings.depth + 1))
+    num_assumptions = rng.randint(1, cap)
     assumptions = atoms[:]
     rng.shuffle(assumptions)
     assumptions = assumptions[:num_assumptions]
 
-    goal = _gen_goal(rng, assumptions, settings.depth)
+    # Per-puzzle leaf bias ⇒ different tree sizes / branching at the same `depth` cap.
+    leaf_p = rng.uniform(0.12, 0.55)
+    goal = _gen_goal(rng, assumptions, settings.depth, leaf_p)
     statement_prop = _build_statement(assumptions, goal)
     statement = statement_prop.render()
 
