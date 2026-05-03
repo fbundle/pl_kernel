@@ -80,6 +80,9 @@ def parseName (xs: List Char): Option (String × List Char) :=
 -- Var
 def parseVar: ParsePropFunc := mapParseFunc parseName P.var
 
+-- Fals
+def parseFals: ParsePropFunc := mapParseFunc (parseChar '⊥') (λ _ => P.fals)
+
 
 def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
     match rightList with
@@ -89,11 +92,8 @@ def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
 
 mutual
 
--- "(" Imp ")"
-partial def parseImpWithParens: ParsePropFunc := mapParseFunc ((parseChar '(') ++ parseImp ++ (parseChar ')')) (λ (_, p, _) => p)
-
--- Atom ::= Var | "(" Imp ")"
-partial def parseAtom: ParsePropFunc := parseVar || parseImpWithParens
+-- Atom ::= Var | ⊥ | "(" Imp ")"
+partial def parseAtom: ParsePropFunc := parseVar || parseFals || mapParseFunc ((parseChar '(') ++ parseImp ++ (parseChar ')')) (λ (_, p, _) => p)
 
 -- Not  ::= "¬" Not | Atom
 partial def parseNot: ParsePropFunc := mapParseFunc ((parseChar '¬') ++ parseNot) (λ (_, p) => P.imp p P.fals) || parseAtom
