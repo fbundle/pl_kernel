@@ -27,17 +27,6 @@ def mapParseFunc (p: ParseFunc α) (m: α → β) (xs: List Char): Option (β ×
   let (a, xs) ← p xs
   return (m a, xs)
 
-/--
-def parseAnyWS (xs: List Char): Option (Unit × List Char) :=
-  match xs with
-    | [] => some ((), xs)
-    | x :: rest =>
-      if ¬ x.isWhitespace then
-        some ((), xs)
-      else
-        parseAnyWS rest
---/
-
 def parseFail (xs: List Char): Option (α × List Char) := none
 
 def parseChar (ch: Char) (xs: List Char): Option (Char × List Char) :=
