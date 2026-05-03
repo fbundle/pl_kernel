@@ -27,7 +27,7 @@ def ParseFunc.map (p: ParseFunc α) (m: α → β) (xs: List Char): Option (β �
   let (a, xs) ← p xs
   return (m a, xs)
 
-def parseFail (xs: List Char): Option (α × List Char) := none
+def parseFail: ParseFunc α := λ _ => none
 
 def parseChar (ch: Char): ParseFunc Char :=
   λ (xs: List Char) =>
