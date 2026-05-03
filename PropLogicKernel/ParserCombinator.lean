@@ -18,24 +18,20 @@ Atom ::= variable | "(" Imp ")"
 
 def ParseFunc α := List Char → Option (α × List Char)
 
-def parseConcat (p1: ParseFunc α) (p2: ParseFunc β): ParseFunc (α × β) :=
-  let parse (xs: List Char): Option ((α × β) × List Char) := do
-    let (a, xs) := ← p1 xs
-    let (b, xs) := ← p2 xs
-    return ((a, b), xs)
-  parse
+def parseConcat (p1: ParseFunc α) (p2: ParseFunc β) (xs: List Char): Option ((α × β) × List Char) := do
+  let (a, xs) := ← p1 xs
+  let (b, xs) := ← p2 xs
+  return ((a, b), xs)
 
 infix:60 " ++ " => parseConcat
 
-def parseEither (p1: ParseFunc α) (p2: ParseFunc α): ParseFunc α :=
-  let parse (xs: List Char): Option (α × List Char) :=
-    match p1 xs with
-      | some (a1, xs) => some (a1, xs)
-      | none =>
-        match p2 xs with
-          | some (a2, xs) => some (a2, xs)
-          | none => none
-  parse
+def parseEither (p1: ParseFunc α) (p2: ParseFunc α) (xs: List Char): Option (α × List Char) := do
+  match p1 xs with
+    | some (a1, xs) => some (a1, xs)
+    | none =>
+      match p2 xs with
+        | some (a2, xs) => some (a2, xs)
+        | none => none
 
 infix:50 " || " => parseEither
 
@@ -57,6 +53,7 @@ def parseChar (ch: Char) (xs: List Char): Option (Char × List Char) :=
       else
         none
 
+def parseMany (p: ParseFunc α) (xs: List Char): Option (List α × List Char) :=
 
 
 
