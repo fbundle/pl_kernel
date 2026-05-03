@@ -6,36 +6,41 @@ namespace PropLogicKernel.ParserCombinator
 
 def ParseFunc α := List Char → Option (α × List Char)
 
-def concatParseFunc (p1: ParseFunc α) (p2: ParseFunc β) (xs1: List Char): Option ((α × β) × List Char) := do
+def ParseFunc.concat (p1: ParseFunc α) (p2: ParseFunc β): ParseFunc (α × β) :=
+  λ (xs1: List Char) => do
   let (a, xs2) ← p1 xs1
   let (b, xs3) ← p2 xs2
   return ((a, b), xs3)
 
-infixr:60 " ++ " => concatParseFunc
+infixr:60 " ++ " => ParseFunc.concat
 
-def eitherParseFunc (p1: ParseFunc α) (p2: ParseFunc α) (xs: List Char): Option (α × List Char) := do
+def ParseFunc.orElse (p1: ParseFunc α) (p2: ParseFunc α): ParseFunc α :=
+  λ (xs: List Char) => do
+  -- p1 xs <|> p2 xs
   match p1 xs with
     | some (a1, xs) => some (a1, xs)
     | none => p2 xs
 
-infixr:50 " || " => eitherParseFunc
+infixr:50 " || " => ParseFunc.orElse
 
-def mapParseFunc (p: ParseFunc α) (m: α → β) (xs: List Char): Option (β × List Char) := do
+def ParseFunc.map (p: ParseFunc α) (m: α → β) (xs: List Char): Option (β × List Char) := do
   let (a, xs) ← p xs
   return (m a, xs)
 
 def parseFail (xs: List Char): Option (α × List Char) := none
 
-def parseChar (ch: Char) (xs: List Char): Option (Char × List Char) :=
-  match xs with
-    | [] => none
-    | x :: rest =>
-      if x == ch then
-        some (ch, rest)
-      else
-        none
+def parseChar (ch: Char): ParseFunc Char :=
+  λ (xs: List Char) =>
+    match xs with
+      | [] => none
+      | x :: rest =>
+        if x == ch then
+          some (ch, rest)
+        else
+          none
 
-partial def listParseFunc (p: ParseFunc α) (xs: List Char): Option (List α × List Char) :=
+
+partial def ParseFunc.repeat (p: ParseFunc α) (xs: List Char): Option (List α × List Char) :=
   let rec loop (ys: Array α) (xs: List Char): Option (List α × List Char) :=
     match p xs with
       | none => some (ys.toList, xs)
@@ -66,10 +71,10 @@ def ParsePropFunc := ParseFunc P
 def parseNonEmptyString (chList: List Char) (xs: List Char): Option (String × List Char) := do
   let pList: List (ParseFunc Char) := chList.map parseChar
   -- p1: parse any characters in chList
-  let p1: ParseFunc Char := pList.foldl eitherParseFunc parseFail
+  let p1: ParseFunc Char := pList.foldl ParseFunc.orElse parseFail
   -- p2:
-  let p2: ParseFunc (List Char) := listParseFunc p1
-  let p3: ParseFunc String := mapParseFunc p2 String.ofList
+  let p2: ParseFunc (List Char) := ParseFunc.repeat p1
+  let p3: ParseFunc String := p2.map String.ofList
 
   let (s, rest) ← p3 xs
   if s.length == 0 then
@@ -77,13 +82,13 @@ def parseNonEmptyString (chList: List Char) (xs: List Char): Option (String × L
   else
     return (s, rest)
 
-def parseName := parseNonEmptyString "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".toList
+def parseName: ParseFunc String := parseNonEmptyString "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".toList
 
 -- Var
-def parseVar: ParsePropFunc := mapParseFunc parseName P.var
+def parseVar: ParsePropFunc := parseName.map P.var
 
 -- Fals
-def parseFals: ParsePropFunc := mapParseFunc (parseChar '⊥') (λ _ => P.fals)
+def parseFals: ParsePropFunc := (parseChar '⊥').map (λ _ => P.fals)
 
 
 def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
@@ -95,10 +100,10 @@ def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
 mutual
 
 -- Atom ::= Var | ⊥ | "(" Imp ")"
-partial def parseAtom: ParsePropFunc := parseVar || parseFals || mapParseFunc ((parseChar '(') ++ parseImp ++ (parseChar ')')) (λ (_, p, _) => p)
+partial def parseAtom: ParsePropFunc := parseVar || parseFals || ((parseChar '(') ++ parseImp ++ (parseChar ')')).map (λ (_, p, _) => p)
 
 -- Not  ::= "¬" Not | Atom
-partial def parseNot: ParsePropFunc := mapParseFunc ((parseChar '¬') ++ parseNot) (λ (_, p) => P.imp p P.fals) || parseAtom
+partial def parseNot: ParsePropFunc := ((parseChar '¬') ++ parseNot).map (λ (_, p) => P.imp p P.fals) || parseAtom
 
 
 -- B := A (ch B)?
@@ -107,8 +112,8 @@ partial def makeRightAssocParseFunc (parseA: ParsePropFunc) (ch: Char) (mk: P �
 
   let (left, xs) ← parseA xs
 
-  let rightList := mapParseFunc ((parseChar ch) ++ parseB) (λ (_, p) => p)
-  let (rightList, xs) ← (listParseFunc rightList) xs
+  let rightList := ((parseChar ch) ++ parseB).map (λ (_, p) => p)
+  let (rightList, xs) ← (ParseFunc.repeat rightList) xs
 
   return (mk left rightList, xs)
 
