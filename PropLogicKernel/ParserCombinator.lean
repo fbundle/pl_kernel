@@ -65,14 +65,15 @@ end PropLogicKernel.ParserCombinator
 
 -- Imp  ::= Or ("->" Imp)?        // right
 -- Or   ::= And ("∨" Or)?         // right
--- And  ::= Not ("∧" And)?        // right
--- Not  ::= "¬" Not | Atom
--- Atom ::= variable | "(" Imp ")"
+-- And  ::= Atom ("∧" And)?        // right
+-- Atom ::= Var | "(" Imp ")"
 
 namespace PropLogicKernel.Parser
 
 open PropLogicKernel.ParserCombinator
 open PropLogicKernel.Basic
+
+def ParsePropFunc := ParseFunc P
 
 def parseName (xs: List Char): Option (String × List Char) :=
   let chList: List Char := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".toList
@@ -87,22 +88,17 @@ def parseName (xs: List Char): Option (String × List Char) :=
 
 mutual
 
-def parseVar (xs: List Char): Option (P × List Char) := do
-  let (name, xs) ← parseName xs
-  return (P.var name, xs)
+-- Var
+def parseVar: ParsePropFunc := parseMap parseName P.var
 
-def parseImpWithParens (xs: List Char): Option (P × List Char) := do
-  let ((_, p, _), xs)← ((parseChar '(') ++ parseImp ++ (parseChar ')')) xs
-  return (p, xs)
+-- "(" Imp ")"
+def parseImpWithParens: ParsePropFunc := parseMap ((parseChar '(') ++ parseImp ++ (parseChar ')')) (λ (_, p, _) => p)
 
-def parseAtom (xs: List Char): Option (P × List Char) :=
-  sorry
+-- Atom
+def parseAtom: ParsePropFunc := parseVar || parseImpWithParens
 
+-- And
 
-def parseNot (xs: List Char): Option (P × List Char) :=
-  let x := (parseChar '¬') ++ parseNot
-
-  sorry
 
 def parseImp (xs: List Char): Option (P × List Char) :=
   sorry
