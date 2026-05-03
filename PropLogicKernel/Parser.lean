@@ -1,83 +1,139 @@
 import PropLogicKernel.Basic
+import PropLogicKernel.Printer
+
+namespace PropLogicKernel.ParserCombinator
+
+
+def ParseFunc α := List Char → Option (α × List Char)
+
+def concatParseFunc (p1: ParseFunc α) (p2: ParseFunc β) (xs1: List Char): Option ((α × β) × List Char) := do
+  let (a, xs2) ← p1 xs1
+  let (b, xs3) ← p2 xs2
+  return ((a, b), xs3)
+
+infixr:60 " ++ " => concatParseFunc
+
+def eitherParseFunc (p1: ParseFunc α) (p2: ParseFunc α) (xs: List Char): Option (α × List Char) := do
+  match p1 xs with
+    | some (a1, xs) => some (a1, xs)
+    | none => p2 xs
+
+infixr:50 " || " => eitherParseFunc
+
+def mapParseFunc (p: ParseFunc α) (m: α → β) (xs: List Char): Option (β × List Char) := do
+  let (a, xs) ← p xs
+  return (m a, xs)
+
+def parseFail (xs: List Char): Option (α × List Char) := none
+
+def parseChar (ch: Char) (xs: List Char): Option (Char × List Char) :=
+  match xs with
+    | [] => none
+    | x :: rest =>
+      if x == ch then
+        some (ch, rest)
+      else
+        none
+
+partial def listParseFunc (p: ParseFunc α) (xs: List Char): Option (List α × List Char) :=
+  let rec loop (ys: Array α) (xs: List Char): Option (List α × List Char) :=
+    match p xs with
+      | none => some (ys.toList, xs)
+      | some (y, xs1) =>
+        assert! xs1.length < xs.length
+        loop (ys.push y) xs1
+  loop #[] xs
+
+
+end PropLogicKernel.ParserCombinator
+
+
+-- grammar (not left recursive)
+
+-- Imp  ::= Or ("->" Imp)?        // right
+-- Or   ::= And ("∨" Or)?         // right
+-- And  ::= Not ("∧" And)?        // right
+-- Not  ::= "¬" Not | Atom
+-- Atom ::= Var | "(" Imp ")"
 
 namespace PropLogicKernel.Parser
 
+open PropLogicKernel.ParserCombinator
 open PropLogicKernel.Basic
 
-/--
-the code below was written by cursor
---/
+def ParsePropFunc := ParseFunc P
+
+def parseNonEmptyString (chList: List Char) (xs: List Char): Option (String × List Char) := do
+  let pList: List (ParseFunc Char) := chList.map parseChar
+  -- p1: parse any characters in chList
+  let p1: ParseFunc Char := pList.foldl eitherParseFunc parseFail
+  -- p2:
+  let p2: ParseFunc (List Char) := listParseFunc p1
+  let p3: ParseFunc String := mapParseFunc p2 String.ofList
+
+  let (s, rest) ← p3 xs
+  if s.length == 0 then
+    failure
+  else
+    return (s, rest)
+
+def parseName := parseNonEmptyString "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".toList
+
+-- Var
+def parseVar: ParsePropFunc := mapParseFunc parseName P.var
+
+-- Fals
+def parseFals: ParsePropFunc := mapParseFunc (parseChar '⊥') (λ _ => P.fals)
 
 
-private def skipWs (cs : List Char) : List Char :=
-  cs.dropWhile (·.isWhitespace)
+def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
+    match rightList with
+      | [] => left
+      | p :: rest => f left (makeRightAssocF f p rest)
 
-private def isAtomChar (c : Char) : Bool :=
-  c.isUpper || c.isDigit || c == '_'
-
-private def isAllowedPropChar (c : Char) : Bool :=
-  c.isWhitespace || c == '(' || c == ')' || c == '∧' || c == '∨' || c == '→' || c == '⊥' || isAtomChar c
 
 mutual
-  /-- Right-associative: `A → B → C` parses as `A → (B → C)`. -/
-  partial def parseImp (cs : List Char) : Option (P × List Char) := do
-    let (p, cs) ← parseOr cs
-    let cs := skipWs cs
-    match cs with
-    | '→' :: cs =>
-      let (q, cs) ← parseImp cs
-      some (P.imp p q, cs)
-    | _ => some (p, cs)
 
-  /-- Right-associative: `A ∨ B ∨ C` parses as `A ∨ (B ∨ C)`. -/
-  partial def parseOr (cs : List Char) : Option (P × List Char) := do
-    let (p, cs) ← parseAnd cs
-    let cs := skipWs cs
-    match cs with
-    | '∨' :: cs =>
-      let (q, cs) ← parseOr cs
-      some (P.or p q, cs)
-    | _ => some (p, cs)
+-- Atom ::= Var | ⊥ | "(" Imp ")"
+partial def parseAtom: ParsePropFunc := parseVar || parseFals || mapParseFunc ((parseChar '(') ++ parseImp ++ (parseChar ')')) (λ (_, p, _) => p)
 
-  /-- Right-associative: `A ∧ B ∧ C` parses as `A ∧ (B ∧ C)`. -/
-  partial def parseAnd (cs : List Char) : Option (P × List Char) := do
-    let (p, cs) ← parseUnary cs
-    let cs := skipWs cs
-    match cs with
-    | '∧' :: cs =>
-      let (q, cs) ← parseAnd cs
-      some (P.and p q, cs)
-    | _ => some (p, cs)
+-- Not  ::= "¬" Not | Atom
+partial def parseNot: ParsePropFunc := mapParseFunc ((parseChar '¬') ++ parseNot) (λ (_, p) => P.imp p P.fals) || parseAtom
 
-  partial def parseUnary (cs : List Char) : Option (P × List Char) := do
-    let cs := skipWs cs
-    match cs with
-    | [] => none
-    | '⊥' :: cs => some (P.fals, cs)
-    | '(' :: cs => do
-      let (p, cs) ← parseImp cs
-      let cs := skipWs cs
-      match cs with
-      | ')' :: cs => some (p, cs)
-      | _ => none
-    | c :: rest =>
-      if isAtomChar c then
-        let all := c :: rest
-        let idChars := all.takeWhile isAtomChar
-        some (P.var (String.ofList idChars), all.drop idChars.length)
-      else
-        none
+
+-- B := A (ch B)?
+partial def makeRightAssocParseFunc (parseA: ParsePropFunc) (ch: Char) (mk: P → List P → P) (xs: List Char): Option (P × List Char) := do
+  let parseB := makeRightAssocParseFunc parseA ch mk
+
+  let (left, xs) ← parseA xs
+
+  let rightList := mapParseFunc ((parseChar ch) ++ parseB) (λ (_, p) => p)
+  let (rightList, xs) ← (listParseFunc rightList) xs
+
+  return (mk left rightList, xs)
+
+
+-- And  ::= Not ("∧" And)?
+partial def parseAnd: ParsePropFunc := makeRightAssocParseFunc parseNot '∧' (makeRightAssocF P.and)
+
+-- Or   ::= And ("∨" Or)?
+partial def parseOr: ParsePropFunc := makeRightAssocParseFunc parseAnd '∨' (makeRightAssocF P.or)
+
+-- Imp  ::= Or ("→" Imp)?
+partial def parseImp: ParsePropFunc := makeRightAssocParseFunc parseOr '→' (makeRightAssocF P.imp)
+
 end
 
-/-- Parse a proposition; returns the remainder string (after skipping trailing whitespace). -/
-def parseProp? (s : String) : Option P :=
-  let s := s.toUpper -- make sure the proposition is in uppercase
-  if !(s.toList.all isAllowedPropChar) then
-    none
-  else
-  match parseImp (skipWs s.toList) with
-  | none => none
-  | some (p, _) => some p
+def parseProp? (input: String): Option P := do
+  let chList := input.toList.filter (λ x => ¬ x.isWhitespace)
+  let (p, _) ← parseImp chList
+  return p
+
+#eval parseProp? "A → ⊥"
+#eval parseProp? "A ∧ B → B ∧ A"
+#eval parseProp? "(A → B) ∧ ¬ B → ¬ A"
+#eval parseProp? "A → (A → B) → (A → C) → (B ∨ C → D) → D"
+#eval parseProp? "¬¬P → P"
 
 def parseTactic? (s: String): Option T :=
   let s := s.trimAscii.toString
