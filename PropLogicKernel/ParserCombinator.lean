@@ -65,7 +65,8 @@ end PropLogicKernel.ParserCombinator
 
 -- Imp  ::= Or ("->" Imp)?        // right
 -- Or   ::= And ("∨" Or)?         // right
--- And  ::= Atom ("∧" And)?        // right
+-- And  ::= Not ("∧" And)?        // right
+-- Not  ::= "¬" Not | Atom
 -- Atom ::= Var | "(" Imp ")"
 
 namespace PropLogicKernel.Parser
@@ -86,21 +87,23 @@ def parseName (xs: List Char): Option (String × List Char) :=
 
   p3 xs
 
-mutual
-
 -- Var
 def parseVar: ParsePropFunc := parseMap parseName P.var
 
+mutual
+
 -- "(" Imp ")"
-def parseImpWithParens: ParsePropFunc := parseMap ((parseChar '(') ++ parseImp ++ (parseChar ')')) (λ (_, p, _) => p)
+partial def parseImpWithParens: ParsePropFunc := parseMap ((parseChar '(') ++ parseImp ++ (parseChar ')')) (λ (_, p, _) => p)
 
--- Atom
-def parseAtom: ParsePropFunc := parseVar || parseImpWithParens
+-- Atom ::= Var | "(" Imp ")"
+partial def parseAtom: ParsePropFunc := parseVar || parseImpWithParens
 
--- And
+-- Not  ::= "¬" Not | Atom
+partial def parseNot: ParsePropFunc := parseMap ((parseChar '¬') ++ parseNot) (λ (_, p) => P.imp p P.fals) || parseAtom
 
 
-def parseImp (xs: List Char): Option (P × List Char) :=
+
+partial def parseImp (xs: List Char): Option (P × List Char) :=
   sorry
 
 end
