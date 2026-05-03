@@ -90,6 +90,15 @@ def parseName (xs: List Char): Option (String × List Char) :=
 -- Var
 def parseVar: ParsePropFunc := mapParseFunc parseName P.var
 
+
+def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
+    match rightList with
+      | [] => left
+      | p :: rest => f left (makeRightAssocF f p rest)
+
+
+
+
 mutual
 
 -- "(" Imp ")"
@@ -101,24 +110,32 @@ partial def parseAtom: ParsePropFunc := parseVar || parseImpWithParens
 -- Not  ::= "¬" Not | Atom
 partial def parseNot: ParsePropFunc := mapParseFunc ((parseChar '¬') ++ parseNot) (λ (_, p) => P.imp p P.fals) || parseAtom
 
+
+-- B := A (ch B)?
+partial def makeRightAssocParseFunc (parseA: ParsePropFunc) (ch: Char) (mk: P → List P → P) (xs: List Char): Option (P × List Char) := do
+  let parseB := makeRightAssocParseFunc parseA ch mk
+
+  let (left, xs) ← parseA xs
+
+  let rightList := mapParseFunc ((parseChar ch) ++ parseB) (λ (_, p) => p)
+  let (rightList, xs) ← (listParseFunc rightList) xs
+
+  return (mk left rightList, xs)
+
+
 -- And  ::= Not ("∧" And)?
-partial def parseAnd (xs: List Char): Option (P × List Char) := do
-  let rightP := mapParseFunc ((parseChar '∧') ++ parseAnd) (λ (_, p) => p)
-  let (left, xs) ← parseNot xs
-  let (rightList, xs) ← (listParseFunc rightP) xs
+partial def parseAnd: ParsePropFunc := makeRightAssocParseFunc parseNot '∧' (makeRightAssocF P.and)
 
-  let rec makeAnd (left: P) (rightList: List P): P :=
-    match rightList with
-      | [] => left
-      | p :: rest => P.and left (makeAnd p rest)
-
-  return (makeAnd left rightList, xs)
+-- Or   ::= And ("∨" Or)?
+partial def parseOr: ParsePropFunc := makeRightAssocParseFunc parseAnd '∨' (makeRightAssocF P.or)
 
 
-partial def parseImp (xs: List Char): Option (P × List Char) :=
-  sorry
+-- Imp  ::= Or ("→" Imp)?
+partial def parseImp: ParsePropFunc := makeRightAssocParseFunc parseOr '→' (makeRightAssocF P.imp)
 
 end
+
+def parseProp? := parseImp
 
 
 
