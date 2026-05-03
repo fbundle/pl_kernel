@@ -30,7 +30,7 @@ def ParseFunc.map (p: ParseFunc α) (m: α → β): ParseFunc β :=
 
 def parseFail: ParseFunc α := λ _ => none
 
-def parseChar (ch: Char): ParseFunc Char :=
+def parseExact (ch: Char): ParseFunc Char :=
   λ (xs: List Char) =>
     match xs with
       | [] => none
@@ -70,7 +70,7 @@ open PropLogicKernel.Basic
 def ParsePropFunc := ParseFunc P
 
 def parseNonEmptyString (chList: List Char) (xs: List Char): Option (String × List Char) := do
-  let pList: List (ParseFunc Char) := chList.map parseChar
+  let pList: List (ParseFunc Char) := chList.map parseExact
   -- p1: parse any characters in chList
   let p1: ParseFunc Char := pList.foldl ParseFunc.orElse parseFail
   -- p2:
@@ -89,7 +89,7 @@ def parseName: ParseFunc String := parseNonEmptyString "ABCDEFGHIJKLMNOPQRSTUVWX
 def parseVar: ParsePropFunc := parseName.map P.var
 
 -- Fals
-def parseFals: ParsePropFunc := (parseChar '⊥').map (λ _ => P.fals)
+def parseFals: ParsePropFunc := (parseExact '⊥').map (λ _ => P.fals)
 
 
 def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
@@ -101,10 +101,10 @@ def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
 mutual
 
 -- Atom ::= Var | ⊥ | "(" Imp ")"
-partial def parseAtom: ParsePropFunc := parseVar || parseFals || ((parseChar '(') ++ parseImp ++ (parseChar ')')).map (λ (_, p, _) => p)
+partial def parseAtom: ParsePropFunc := parseVar || parseFals || ((parseExact '(') ++ parseImp ++ (parseExact ')')).map (λ (_, p, _) => p)
 
 -- Not  ::= "¬" Not | Atom
-partial def parseNot: ParsePropFunc := ((parseChar '¬') ++ parseNot).map (λ (_, p) => P.imp p P.fals) || parseAtom
+partial def parseNot: ParsePropFunc := ((parseExact '¬') ++ parseNot).map (λ (_, p) => P.imp p P.fals) || parseAtom
 
 
 -- B := A (sep B)?
@@ -113,7 +113,7 @@ partial def makeRightAssocParseFunc (parseA: ParsePropFunc) (sep: Char) (mk: P �
 
   let (left, xs) ← parseA xs
 
-  let parseSepB := ((parseChar sep) ++ parseB).map (λ (_, p) => p)
+  let parseSepB := ((parseExact sep) ++ parseB).map (λ (_, p) => p)
   let (rightList, xs) ← parseSepB.repeat xs
 
   return (mk left rightList, xs)
