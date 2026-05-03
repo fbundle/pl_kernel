@@ -39,14 +39,14 @@ def parseEither (p1: ParseFunc α) (p2: ParseFunc α): ParseFunc α :=
 
 infix:50 " || " => parseEither
 
-def parseAnyWhiteSpace (xs: List Char): Option (Unit × List Char) :=
+def parseAnyWS (xs: List Char): Option (Unit × List Char) :=
   match xs with
     | [] => some ((), xs)
     | x :: rest =>
       if ¬ x.isWhitespace then
         some ((), xs)
       else
-        parseAnyWhiteSpace rest
+        parseAnyWS rest
 
 def parseChar (ch: Char) (xs: List Char): Option (Char × List Char) :=
   match xs with
