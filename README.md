@@ -160,4 +160,3 @@ The following files were written by Cursor and Claude:
 
 - `README.md`
 - All Python code in this repo (for example: `py_prop_logic_kernel/`)
-- `PropLogicKernel/Parser.lean`
