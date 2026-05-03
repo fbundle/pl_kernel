@@ -23,9 +23,10 @@ def ParseFunc.orElse (p1: ParseFunc α) (p2: ParseFunc α): ParseFunc α :=
 
 infixr:50 " || " => ParseFunc.orElse
 
-def ParseFunc.map (p: ParseFunc α) (m: α → β) (xs: List Char): Option (β × List Char) := do
-  let (a, xs) ← p xs
-  return (m a, xs)
+def ParseFunc.map (p: ParseFunc α) (m: α → β): ParseFunc β :=
+  λ (xs: List Char) => do
+    let (a, xs) ← p xs
+    return (m a, xs)
 
 def parseFail: ParseFunc α := λ _ => none
 
@@ -73,7 +74,7 @@ def parseNonEmptyString (chList: List Char) (xs: List Char): Option (String × L
   -- p1: parse any characters in chList
   let p1: ParseFunc Char := pList.foldl ParseFunc.orElse parseFail
   -- p2:
-  let p2: ParseFunc (List Char) := ParseFunc.repeat p1
+  let p2: ParseFunc (List Char) := p1.repeat
   let p3: ParseFunc String := p2.map String.ofList
 
   let (s, rest) ← p3 xs
@@ -106,14 +107,14 @@ partial def parseAtom: ParsePropFunc := parseVar || parseFals || ((parseChar '('
 partial def parseNot: ParsePropFunc := ((parseChar '¬') ++ parseNot).map (λ (_, p) => P.imp p P.fals) || parseAtom
 
 
--- B := A (ch B)?
-partial def makeRightAssocParseFunc (parseA: ParsePropFunc) (ch: Char) (mk: P → List P → P) (xs: List Char): Option (P × List Char) := do
-  let parseB := makeRightAssocParseFunc parseA ch mk
+-- B := A (sep B)?
+partial def makeRightAssocParseFunc (parseA: ParsePropFunc) (sep: Char) (mk: P → List P → P) (xs: List Char): Option (P × List Char) := do
+  let parseB := makeRightAssocParseFunc parseA sep mk
 
   let (left, xs) ← parseA xs
 
-  let rightList := ((parseChar ch) ++ parseB).map (λ (_, p) => p)
-  let (rightList, xs) ← (ParseFunc.repeat rightList) xs
+  let parseSepB := ((parseChar sep) ++ parseB).map (λ (_, p) => p)
+  let (rightList, xs) ← parseSepB.repeat xs
 
   return (mk left rightList, xs)
 
