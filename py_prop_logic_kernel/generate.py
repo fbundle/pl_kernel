@@ -4,6 +4,8 @@ import hashlib
 import random
 from dataclasses import dataclass
 
+from .puzzle import Puzzle  # package usage
+
 # ---------------------------------------------------------------------------
 # Proposition AST
 # ---------------------------------------------------------------------------
@@ -555,9 +557,7 @@ def _try_generate_once(rng: random.Random, settings: GenerateSettings):
     if proof is None:
         return None, "proof synthesis failed"
 
-    from dataclasses import dataclass as _dc  # local import to avoid circular if used standalone
-
-    result = dict(
+    puzzle = Puzzle(
         statement=statement,
         proof=proof,
         settings={
@@ -571,14 +571,14 @@ def _try_generate_once(rng: random.Random, settings: GenerateSettings):
             "assumption_kinds": [type(a).__name__ for a in assumptions],
         },
     )
-    return result, None
+    return puzzle, None
 
 
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def generate_puzzle(settings: GenerateSettings = GenerateSettings()) -> dict:
+def generate_puzzle(settings: GenerateSettings = GenerateSettings()) -> "Puzzle":
     base_seed = settings.seed if settings.seed is not None else random.randrange(1 << 30)
     last_err: str | None = None
     attempts_cap = min(max(1, settings.max_attempts), 4096)
@@ -613,8 +613,8 @@ if __name__ == "__main__":
         p = generate_puzzle(cfg)
         print(f"\n{'='*60}")
         print(f"[{label}]")
-        print(f"  Statement : {p['statement']}")
-        print(f"  Goal kind : {p['settings']['goal_kind']}")
-        print(f"  Assumps   : {p['settings']['assumption_kinds']}")
-        print(f"  Proof len : {p['settings']['proof_length']}")
-        print(f"  Proof     : {p['proof']}")
+        print(f"  Statement : {p.statement}")
+        print(f"  Goal kind : {p.settings['goal_kind']}")
+        print(f"  Assumps   : {p.settings['assumption_kinds']}")
+        print(f"  Proof len : {p.settings['proof_length']}")
+        print(f"  Proof     : {p.proof}")
