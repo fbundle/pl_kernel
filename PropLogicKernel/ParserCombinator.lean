@@ -128,8 +128,7 @@ def parseProp? (input: String): Option P := do
   let (p, _) ← parseImp chList
   return p
 
-
-#eval parseImpWithParens ("( A → B )".toList.filter (λ x => ¬ x.isWhitespace))
+#eval parseProp? "A → ⊥"
 #eval parseProp? "A ∧ B → B ∧ A"
 #eval parseProp? "(A → B) ∧ ¬ B → ¬ A"
 #eval parseProp? "A → (A → B) → (A → C) → (B ∨ C → D) → D"
