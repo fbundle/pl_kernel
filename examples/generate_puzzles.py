@@ -58,7 +58,7 @@ def _worker_generate_one(args: tuple[str, int, int, int, str | None]) -> tuple[i
     out_dir = Path(out_dir_s)
     out_config_dir = out_dir / f"example_num_vars{num_vars}_depth{depth}"
     kernel_exe = Path(kernel_exe_s) if kernel_exe_s is not None else None
-    _write_examples(out_config_dir, num_vars=num_vars, depth=depth, n=n, kernel_exe=kernel_exe, show_progress=False)
+    _write_examples(out_config_dir, num_vars=num_vars, depth=depth, n=n, kernel_exe=kernel_exe, show_progress=True)
     return (num_vars, depth)
 
 
