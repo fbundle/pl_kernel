@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import os
-import random
-from multiprocessing import Process, Queue
+from multiprocessing import Pool
 import sys
 from pathlib import Path
 
@@ -15,161 +13,179 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-# Allow running as: `python examples/check_puzzles.py`
+# Allow running as: `python examples/generate_puzzles.py`
 sys.path.insert(0, str(_repo_root()))
 
-from py_prop_logic_kernel.puzzle import Client, load_puzzle_from_file  # noqa: E402
+from py_prop_logic_kernel.generate import GenerateSettings, generate_puzzle  # noqa: E402
+from py_prop_logic_kernel.puzzle import Client, Puzzle  # noqa: E402
 
 
-def _file_key(root: Path, fp: Path) -> str:
-    fp_res, root_res = fp.resolve(), root.resolve()
-    try:
-        return fp_res.relative_to(root_res).as_posix()
-    except ValueError:
-        return fp_res.as_posix()
+def _write_puzzle_file(path: Path, puzzle: Puzzle) -> None:
+    lines = [f"new {puzzle.statement}", *[str(x).rstrip("\n") for x in puzzle.proof]]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _load_results_csv(csv_path: Path) -> dict[str, str]:
-    if not csv_path.is_file():
-        return {}
-    out: dict[str, str] = {}
-    with csv_path.open(newline="", encoding="utf-8") as f:
-        for row in csv.reader(f):
-            if len(row) < 2:
-                continue
-            key, val = row[0].strip(), row[1].strip()
-            if key == "file":
-                continue
-            out[key] = val
-    return out
+def _puzzle_filename(puzzle: Puzzle) -> str:
+    """Derive filename from the statement hash embedded in puzzle.settings."""
+    sha = puzzle.settings.get("statement_sha256_16", "") if puzzle.settings else ""
+    return f"puzzle_{sha}.txt"
 
 
-def _append_csv_row(csv_path: Path, key: str, ok: bool) -> None:
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    is_new = not csv_path.is_file() or csv_path.stat().st_size == 0
-    with csv_path.open("a", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        if is_new:
-            w.writerow(["file", "correct"])
-        w.writerow([key, "correct" if ok else "not_correct"])
+def _count_existing(out_config_dir: Path) -> int:
+    """Count puzzle files already written in this config directory."""
+    return len(list(out_config_dir.glob("puzzle_*.txt")))
 
 
-def _check_one(client: Client, fp: str) -> tuple[str, bool, str | None]:
-    try:
-        puzzle = load_puzzle_from_file(fp)
-        client.check(puzzle)
-        return (fp, True, None)
-    except Exception as e:
-        return (fp, False, str(e))
+def _write_examples(
+    out_config_dir: Path,
+    *,
+    num_vars: int,
+    depth: int,
+    n: int,
+    kernel_exe: Path | None,
+    show_progress: bool,
+) -> int:
+    """
+    Generate up to `n` puzzles into `out_config_dir`.
+
+    Skips generation entirely if the directory already contains >= n puzzle files
+    (resumable: safe to re-run after an interrupted job).
+
+    Returns the number of puzzles newly written.
+    """
+    out_config_dir.mkdir(parents=True, exist_ok=True)
+
+    already = _count_existing(out_config_dir)
+    remaining = n - already
+    if remaining <= 0:
+        return 0
+
+    written = 0
+    with Client(exe=kernel_exe) if kernel_exe is not None else _NullCtx() as c:
+        it = range(remaining)
+        if show_progress:
+            it = tqdm(it, desc=f"num_vars={num_vars} depth={depth}", leave=False)
+        for i in it:
+            # Offset seed by `already` so resumed runs don't regenerate the same puzzles.
+            seed = num_vars * 1_000_000 + depth * 1_000 + already + i
+            puzzle = generate_puzzle(GenerateSettings(num_vars=num_vars, depth=depth, seed=seed))
+            out_path = out_config_dir / _puzzle_filename(puzzle)
+            # Skip if this exact statement was already written (hash collision guard).
+            if not out_path.exists():
+                _write_puzzle_file(out_path, puzzle)
+                written += 1
+
+            if kernel_exe is not None:
+                assert isinstance(c, Client)
+                c.check(puzzle)
+
+    return written
 
 
-def _worker_run(pairs: list[tuple[str, str]], kernel_exe: str, result_q: Queue) -> None:
-    """Check each puzzle in the chunk; send one (file_key, ok) per puzzle to the main process."""
-    with Client(exe=kernel_exe) as c:
-        for fp, key in pairs:
-            _path, ok, _err = _check_one(c, fp)
-            result_q.put((key, ok))
+class _NullCtx:
+    def __enter__(self):
+        return None
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+def _worker_generate_one(args: tuple[str, int, int, int, str | None]) -> tuple[int, int, int]:
+    out_dir_s, num_vars, depth, n, kernel_exe_s = args
+    out_dir = Path(out_dir_s)
+    out_config_dir = out_dir / f"example_num_vars{num_vars}_depth{depth}"
+    kernel_exe = Path(kernel_exe_s) if kernel_exe_s is not None else None
+    written = _write_examples(
+        out_config_dir, num_vars=num_vars, depth=depth, n=n, kernel_exe=kernel_exe, show_progress=False
+    )
+    return (num_vars, depth, written)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Check all generated puzzles with the kernel.")
+    out_dir = _repo_root() / "output" / "prop_logic_puzzle"
+    cwd = _repo_root()
+
+    parser = argparse.ArgumentParser(description="Generate proposition-logic puzzles dataset.")
+    parser.add_argument("--min-vars", type=int, default=4)
+    parser.add_argument("--max-vars", type=int, default=20)
+    parser.add_argument("--min-depth", type=int, default=6)
+    parser.add_argument("--max-depth", type=int, default=30)
+    parser.add_argument("--examples-per-config", type=int, default=100)
+    parser.add_argument("--jobs", type=int, default=os.cpu_count() or 1, help="Parallel workers (default: all cores).")
     parser.add_argument(
-        "--root",
-        type=str,
-        default=str(_repo_root() / "output" / "prop_logic_puzzle"),
-        help="Root directory containing generated puzzles.",
+        "--check-kernel",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Verify each generated file by running the built kernel once on it.",
     )
     parser.add_argument(
         "--kernel-exe",
         type=str,
-        default=str(_repo_root() / ".lake" / "build" / "bin" / "Main-lean"),
-        help="Path to kernel executable.",
+        default=None,
+        help="Path to kernel executable (default: .lake/build/bin/Main-lean).",
     )
-    parser.add_argument("--limit", type=int, default=None, help="If set, only check the first N puzzle files.")
-    parser.add_argument("--jobs", type=int, default=os.cpu_count() or 1, help="Parallel workers (default: all cores).")
+    parser.add_argument("--kernel-timeout-s", type=float, default=60.0)
     parser.add_argument(
-        "--results-csv",
-        type=str,
-        default=str(_repo_root() / "output" / "prop_logic_puzzle" / "check_results.csv"),
-        help="CSV with columns file,correct — rows already present are skipped (resume).",
+        "--num-vars",
+        type=int,
+        default=None,
+        help="If set, only generate this single num_vars config.",
     )
+    parser.add_argument("--depth", type=int, default=None, help="If set, only generate this single depth.")
     args = parser.parse_args()
 
-    root = Path(args.root)
-    files = sorted(root.rglob("*.txt"))
-    if args.limit is not None:
-        files = files[: max(0, int(args.limit))]
-
-    if not files:
-        raise SystemExit(f"no puzzle files found under {root}")
-
-    csv_path = Path(args.results_csv)
-    done = _load_results_csv(csv_path)
-
-    file_strs: list[str] = []
-    keys: list[str] = []
-    for p in files:
-        file_strs.append(str(p))
-        keys.append(_file_key(root, p))
-
-    pending: list[tuple[str, str]] = []
-    for fp, key in zip(file_strs, keys, strict=True):
-        if key not in done:
-            pending.append((fp, key))
-
-    # Mix order so per-puzzle time isn’t correlated with path (smoother tqdm rate / ETA).
-    random.shuffle(pending)
-
+    min_vars, max_vars = args.min_vars, args.max_vars
+    min_depth, max_depth = args.min_depth, args.max_depth
+    examples_per_config = args.examples_per_config
+    exe = Path(args.kernel_exe) if args.kernel_exe is not None else (cwd / ".lake" / "build" / "bin" / "Main-lean")
+    kernel_exe = exe if args.check_kernel else None
     jobs = max(1, int(args.jobs))
 
-    if pending:
-        if jobs == 1:
-            with Client(exe=args.kernel_exe) as c, tqdm(
-                total=len(pending), desc="checking puzzles", unit="puzzle"
-            ) as pbar:
-                for fp, key in pending:
-                    _path, ok, _err = _check_one(c, fp)
-                    _append_csv_row(csv_path, key, ok)
-                    pbar.update(1)
-        else:
-            chunk_size = max(1, (len(pending) + jobs - 1) // jobs)
-            chunks = [pending[i : i + chunk_size] for i in range(0, len(pending), chunk_size)]
+    if args.num_vars is not None or args.depth is not None:
+        num_vars = args.num_vars if args.num_vars is not None else min_vars
+        depth = args.depth if args.depth is not None else min_depth
+        out_config_dir = out_dir / f"example_num_vars{num_vars}_depth{depth}"
+        already = _count_existing(out_config_dir)
+        if already >= examples_per_config:
+            print(f"skipping num_vars={num_vars} depth={depth}: already have {already} puzzles")
+            return
+        print(f"writing to {out_config_dir}/ (num_vars={num_vars}, depth={depth}, have={already}, target={examples_per_config})")
+        _write_examples(
+            out_config_dir,
+            num_vars=num_vars,
+            depth=depth,
+            n=examples_per_config,
+            kernel_exe=kernel_exe,
+            show_progress=True,
+        )
+        return
 
-            result_q: Queue = Queue()
-            workers: list[Process] = []
-            for ch in chunks:
-                p = Process(target=_worker_run, args=(ch, args.kernel_exe, result_q))
-                p.start()
-                workers.append(p)
+    # Schedule work from smallest depth -> largest depth (then num_vars),
+    # so the job order is deterministic even under parallelism.
+    configs = sorted(
+        ((nv, d) for d in range(min_depth, max_depth + 1) for nv in range(min_vars, max_vars + 1)),
+        key=lambda x: (x[1], x[0]),
+    )
+    kernel_exe_s = str(kernel_exe) if kernel_exe is not None else None
+    work = [(str(out_dir), nv, d, examples_per_config, kernel_exe_s) for (nv, d) in configs]
 
-            with tqdm(total=len(pending), desc="checking puzzles", unit="puzzle") as pbar:
-                for _ in range(len(pending)):
-                    key, ok = result_q.get()
-                    _append_csv_row(csv_path, key, ok)
-                    pbar.update(1)
+    if jobs == 1:
+        for nv, d in tqdm(configs, desc="configs"):
+            out_config_dir = out_dir / f"example_num_vars{nv}_depth{d}"
+            already = _count_existing(out_config_dir)
+            if already >= examples_per_config:
+                continue
+            print(f"writing to {out_config_dir}/ (have={already}, target={examples_per_config})")
+            _write_examples(
+                out_config_dir, num_vars=nv, depth=d, n=examples_per_config,
+                kernel_exe=kernel_exe, show_progress=True,
+            )
+        return
 
-            for p in workers:
-                p.join()
-
-    final = _load_results_csv(csv_path)
-    corpus_keys = keys
-    missing = [k for k in corpus_keys if k not in final]
-    not_correct = [k for k in corpus_keys if final.get(k) == "not_correct"]
-
-    if missing:
-        print(f"warning: {len(missing)} puzzle(s) have no CSV row (expected after a full run)")
-
-    n_skip = len(file_strs) - len(pending)
-    if pending:
-        print(f"checked {len(pending)} new puzzle(s); skipped {n_skip} already in {csv_path}")
-    else:
-        print(f"no pending puzzles ({n_skip} already in {csv_path})")
-
-    if not_correct:
-        print(f"fail: {len(not_correct)} / {len(corpus_keys)} marked not_correct in CSV")
-        raise SystemExit(1)
-
-    print(f"ok: all {len(corpus_keys)} puzzle(s) in corpus marked correct in CSV")
+    with Pool(processes=jobs) as pool:
+        for nv, d, written in tqdm(pool.imap(_worker_generate_one, work), total=len(work), desc="configs"):
+            if written > 0:
+                print(f"done num_vars={nv} depth={d} (+{written} new)")
 
 
 if __name__ == "__main__":
