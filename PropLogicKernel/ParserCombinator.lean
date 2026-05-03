@@ -66,8 +66,7 @@ open PropLogicKernel.Basic
 
 def ParsePropFunc := ParseFunc P
 
-def parseName (xs: List Char): Option (String × List Char) :=
-  let chList: List Char := "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".toList
+def parseNonEmptyString (chList: List Char) (xs: List Char): Option (String × List Char) := do
   let pList: List (ParseFunc Char) := chList.map parseChar
   -- p1: parse any characters in chList
   let p1: ParseFunc Char := pList.foldl eitherParseFunc parseFail
@@ -75,7 +74,13 @@ def parseName (xs: List Char): Option (String × List Char) :=
   let p2: ParseFunc (List Char) := listParseFunc p1
   let p3: ParseFunc String := mapParseFunc p2 String.ofList
 
-  p3 xs
+  let (s, rest) ← p3 xs
+  if s.length == 0 then
+    failure
+  else
+    return (s, rest)
+
+def parseName := parseNonEmptyString "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".toList
 
 -- Var
 def parseVar: ParsePropFunc := mapParseFunc parseName P.var
