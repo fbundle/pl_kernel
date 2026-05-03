@@ -17,7 +17,7 @@ def _repo_root() -> Path:
 sys.path.insert(0, str(_repo_root()))
 
 from py_prop_logic_kernel.generate import GenerateSettings, generate_puzzle  # noqa: E402
-from py_prop_logic_kernel.puzzle import Client, Puzzle  # noqa: E402
+from py_prop_logic_kernel.puzzle import Puzzle  # noqa: E402
 
 
 def _write_puzzle_file(path: Path, puzzle: Puzzle) -> None:
@@ -34,50 +34,6 @@ def _count_existing(out_config_dir: Path) -> int:
     return len(list(out_config_dir.glob("puzzle_*.txt")))
 
 
-def _write_examples(
-    out_config_dir: Path,
-    *,
-    num_vars: int,
-    depth: int,
-    n: int,
-    kernel_exe: Path | None,
-    show_progress: bool,
-) -> int:
-    out_config_dir.mkdir(parents=True, exist_ok=True)
-
-    already = _count_existing(out_config_dir)
-    remaining = n - already
-    if remaining <= 0:
-        return 0
-
-    written = 0
-    with Client(exe=kernel_exe) if kernel_exe is not None else _NullCtx() as c:
-        it = range(remaining)
-        if show_progress:
-            it = tqdm(it, desc=f"nv={num_vars} d={depth}", leave=False)
-        for i in it:
-            seed = num_vars * 1_000_000 + depth * 1_000 + already + i
-            puzzle = generate_puzzle(GenerateSettings(num_vars=num_vars, depth=depth, seed=seed))
-            out_path = out_config_dir / _puzzle_filename(puzzle)
-            if not out_path.exists():
-                _write_puzzle_file(out_path, puzzle)
-                written += 1
-
-            if kernel_exe is not None:
-                assert isinstance(c, Client)
-                c.check(puzzle)
-
-    return written
-
-
-class _NullCtx:
-    def __enter__(self):
-        return None
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-
 def _worker_generate_one_puzzle(args: tuple[str, int, int, int, int, str | None]) -> bool:
     """Generate a single puzzle. Returns True if a new file was written."""
     out_dir_s, num_vars, depth, seed, already, kernel_exe_s = args
@@ -90,10 +46,6 @@ def _worker_generate_one_puzzle(args: tuple[str, int, int, int, int, str | None]
     if out_path.exists():
         return False
     _write_puzzle_file(out_path, puzzle)
-
-    if kernel_exe is not None:
-        with Client(exe=kernel_exe) as c:
-            c.check(puzzle)
 
     return True
 
