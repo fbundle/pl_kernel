@@ -142,6 +142,7 @@ def parseProp? (input: String): Option P := do
   return p
 
 
+#eval parseImpWithParens ("( A → B )".toList.filter (λ x => ¬ x.isWhitespace))
 #eval parseProp? "A ∧ B → B ∧ A"
 #eval parseProp? "(A → B) ∧ ¬ B → ¬ A"
 #eval parseProp? "A → (A → B) → (A → C) → (B ∨ C → D) → D"
