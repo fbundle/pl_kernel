@@ -68,9 +68,9 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Generate proposition-logic puzzles dataset.")
     parser.add_argument("--min-vars", type=int, default=4)
-    parser.add_argument("--max-vars", type=int, default=20)
+    parser.add_argument("--max-vars", type=int, default=30)
     parser.add_argument("--min-depth", type=int, default=6)
-    parser.add_argument("--max-depth", type=int, default=30)
+    parser.add_argument("--max-depth", type=int, default=100)
     parser.add_argument("--examples-per-config", type=int, default=100)
     parser.add_argument("--jobs", type=int, default=os.cpu_count() or 1, help="Parallel workers (default: all cores).")
     parser.add_argument(
