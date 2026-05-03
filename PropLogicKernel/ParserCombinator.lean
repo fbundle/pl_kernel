@@ -98,8 +98,6 @@ def makeRightAssocF (f: P → P → P) (left: P) (rightList: List P): P :=
       | p :: rest => f left (makeRightAssocF f p rest)
 
 
-
-
 mutual
 
 -- "(" Imp ")"
