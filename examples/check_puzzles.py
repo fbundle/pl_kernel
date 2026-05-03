@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
-from multiprocessing import Pool
+from multiprocessing import Process, Queue
 import sys
 from pathlib import Path
 
@@ -62,14 +62,12 @@ def _check_one(client: Client, fp: str) -> tuple[str, bool, str | None]:
         return (fp, False, str(e))
 
 
-def _worker_check_pairs(args: tuple[list[tuple[str, str]], str]) -> list[tuple[str, bool]]:
-    pairs, kernel_exe = args
-    out: list[tuple[str, bool]] = []
+def _worker_run(pairs: list[tuple[str, str]], kernel_exe: str, result_q: Queue) -> None:
+    """Check each puzzle in the chunk; send one (file_key, ok) per puzzle to the main process."""
     with Client(exe=kernel_exe) as c:
         for fp, key in pairs:
             _path, ok, _err = _check_one(c, fp)
-            out.append((key, ok))
-    return out
+            result_q.put((key, ok))
 
 
 def main() -> None:
@@ -133,13 +131,21 @@ def main() -> None:
             chunk_size = max(1, (len(pending) + jobs - 1) // jobs)
             chunks = [pending[i : i + chunk_size] for i in range(0, len(pending), chunk_size)]
 
-            with Pool(processes=jobs) as pool, tqdm(
-                total=len(pending), desc="checking puzzles", unit="puzzle"
-            ) as pbar:
-                for batch in pool.imap_unordered(_worker_check_pairs, [(ch, args.kernel_exe) for ch in chunks]):
-                    for key, ok in batch:
-                        _append_csv_row(csv_path, key, ok)
-                        pbar.update(1)
+            result_q: Queue = Queue()
+            workers: list[Process] = []
+            for ch in chunks:
+                p = Process(target=_worker_run, args=(ch, args.kernel_exe, result_q))
+                p.start()
+                workers.append(p)
+
+            with tqdm(total=len(pending), desc="checking puzzles", unit="puzzle") as pbar:
+                for _ in range(len(pending)):
+                    key, ok = result_q.get()
+                    _append_csv_row(csv_path, key, ok)
+                    pbar.update(1)
+
+            for p in workers:
+                p.join()
 
     final = _load_results_csv(csv_path)
     corpus_keys = keys
