@@ -134,6 +134,9 @@ partial def dfs
 
   loop (neighbourFunc state)
 
+def autoResolve? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) :=
+  sorry
+
 
 
 
