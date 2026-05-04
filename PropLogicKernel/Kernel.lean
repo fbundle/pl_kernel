@@ -1,11 +1,5 @@
 namespace PropLogicKernel
 
-class Map (ζ: Type u) (α: Type v) (β: Type w) [BEq α] where
-  empty : ζ
-  get? (z: ζ) (key: α): Option β
-  set (z: ζ) (key: α) (val: β): ζ
-  iter (z: ζ): List (α × β)
-
 /--
 basic data structures
 Prop
@@ -72,12 +66,19 @@ inductive T where
   -- add a goal into the current state
   | new (p: P): T
 
+
+class Ctx (α: Type u) where
+  empty : α
+  get? (ctx: α) (n: Nat): Option P
+  set (ctx: α) (n: Nat) (p: P): α
+  iter (ctx: α): List (Nat × P)
+
 -- goal
-structure G (α: Type) [Map α Nat P] where
+structure G (α: Type) [Ctx α] where
   hyp: α
   goal: P
 
-partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option (Nat × List (G α)) :=
+partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option (Nat × List (G α)) :=
   -- (h: Option Nat) => (h: Option P)
   let h?: Option P :=
     let n?: Option Nat :=
@@ -90,7 +91,7 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
         | _ => none
     match n? with
       | none => none
-      | some n => Map.get? g.hyp n
+      | some n => Ctx.get? g.hyp n
 
   match (g.goal, t, h?) with
     -- GOAL RESOLUTION
@@ -99,7 +100,7 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
     -- add hyp h: A and replace goal with B
     | (.imp A B, .intro, _) =>
       some (vc+1, [
-        {g with hyp := Map.set g.hyp vc A, goal := B},
+        {g with hyp := Ctx.set g.hyp vc A, goal := B},
       ])
 
     -- if goal is A and h: A
@@ -162,12 +163,12 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
     -- cases doesn't resolve implication
     | (_, .cases _, some (.or A B)) =>
       some (vc + 2, [
-        {g with hyp := Map.set g.hyp vc A},
-        {g with hyp := Map.set g.hyp (vc+1) B},
+        {g with hyp := Ctx.set g.hyp vc A},
+        {g with hyp := Ctx.set g.hyp (vc+1) B},
       ])
     | (_, .cases _, some (.and A B)) =>
       some (vc + 2, [
-        {g with hyp := Map.set (Map.set g.hyp vc A) (vc+1) B},
+        {g with hyp := Ctx.set (Ctx.set g.hyp vc A) (vc+1) B},
       ])
     | (_, .cases _, some (.fals)) =>
       some (vc, [])
@@ -179,7 +180,7 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
     | (_, .lem A, _) =>
       if ¬ cl then none else
       some (vc + 1, [
-        {g with hyp := Map.set g.hyp vc (P.or (.imp A .fals) A)},
+        {g with hyp := Ctx.set g.hyp vc (P.or (.imp A .fals) A)},
       ])
 
     -- AUTOMATION
@@ -208,19 +209,19 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
     | _ => none
 
 -- state
-structure S (α: Type) [Map α Nat P] where
+structure S (α: Type) [Ctx α] where
   varCount: Nat
   sorrCount: Nat
   newCount: Nat
   stack: List (G α)
 
-def T.resolveState? [Map α Nat P] (t: T) (cl: Bool) (s: S α): Option (S α) :=
+def T.resolveState? [Ctx α] (t: T) (cl: Bool) (s: S α): Option (S α) :=
   match (t, s.stack) with
     -- add a goal into the current state
     | (.new C, _) => some
       {s with
         newCount := s.newCount+1,
-        stack := {hyp := (Map.empty Nat P: α), goal := C} :: s.stack,
+        stack := {hyp := (Ctx.empty: α), goal := C} :: s.stack,
       }
 
     -- sorry

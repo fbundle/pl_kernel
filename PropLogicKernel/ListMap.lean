@@ -13,10 +13,10 @@ def ListMap.get? [BEq α] (map: ListMap α β) (key: α): Option β :=
       else
         get? xs key
 
-instance[BEq α]: Map (ListMap α β) α β  where
+instance: Ctx (ListMap Nat P) where
   empty := []
-  set := λ (map: ListMap α β) (key: α) (val: β) => (key, val) :: map
-  iter := λ (map: ListMap α β) => map
+  set := λ (map: ListMap Nat P) (key: Nat) (val: P) => (key, val) :: map
+  iter := λ (map: ListMap Nat P) => map
   get? := ListMap.get?
 
 end PropLogicKernel.ListMap
