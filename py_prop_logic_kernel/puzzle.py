@@ -15,7 +15,8 @@ _STATUS_RE = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 _ALL_DONE_RE = re.compile(r"^\s*(?:--\s*)?all\s+goals\s+accomplished!\s*$", re.IGNORECASE | re.MULTILINE)
-_INDEX_TACTIC_RE = re.compile(r"^\s*(exact|apply|cases|refine)\s+(\d+)\s*$", re.IGNORECASE)
+_INDEX_TACTIC_RE = re.compile(r"^\s*\b(exact|apply|cases|bridge|refine)\b\s+(\d+)\s*$", re.IGNORECASE)
+
 
 
 @dataclass(frozen=True, slots=True)

@@ -18,10 +18,10 @@ def main() -> int:
         step = c.start()
         while True:
             if step.err:
-                sys.stderr.write(step.err + "\n")
+                sys.stderr.write(step.err.rstrip("\n") + "\n")
                 sys.stderr.flush()
             if step.out:
-                sys.stdout.write(step.out + "\n")
+                sys.stdout.write(step.out.rstrip("\n") + "\n")
                 sys.stdout.flush()
 
             sys.stderr.write("> ")
