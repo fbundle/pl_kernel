@@ -2,7 +2,6 @@ import REPL.REPL
 import PropLogicKernel.REPL
 
 
-def classical_logic: Bool := True
 
 -- A ∧ B → B ∧ A
 -- (A → B) ∧ (B → ⊥) → A → ⊥
@@ -11,6 +10,6 @@ def classical_logic: Bool := True
 
 def main : IO UInt32 :=
   let init := PropLogicKernel.REPL.init
-  let repl := PropLogicKernel.REPL.trans classical_logic
+  let repl := PropLogicKernel.REPL.trans
 
   REPL.run repl init

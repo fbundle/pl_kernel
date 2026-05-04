@@ -14,7 +14,13 @@ open PropLogicKernel.ListMap
 
 abbrev State := S (ListMap Nat P)
 
-def getStep (s: State) (message?: Option String := none): REPL.Step State :=
+
+def toStringTs (ts: List T): String :=
+  let ts := ts.map (λ t => s!"{t}")
+  let ts := String.intercalate "][" ts
+  s!"[{ts}]"
+
+def getStep (s: State) (message?: Option String := none) (hint: Bool := true): REPL.Step State :=
   let isAllGoalsAccomplished (s: State): Bool :=
     s.stack.isEmpty ∧ (s.sorrCount == 0) ∧ (s.newCount ≥ 1)
 
@@ -29,6 +35,14 @@ def getStep (s: State) (message?: Option String := none): REPL.Step State :=
 
   let status: List String :=
     [s!"new_count {s.newCount} sorry_count {s.sorrCount} var_count {s.varCount} goals_remaining {s.stack.length}"]
+
+  let status: List String :=
+    if ¬ hint then status else
+      match s.stack with
+        | [] => status
+        | g :: _ =>
+          let ts := Auto.getAllAvailTactics g (checkAhead := True)
+          s!"hint: {toStringTs ts}" :: status
 
   let status: List String :=
     if ¬ isAllGoalsAccomplished s then status else
@@ -54,22 +68,12 @@ def init: REPL.Step State :=
     stack := []
   }
 
-def toStringTs (ts: List T): String :=
-  let ts := ts.map (λ t => s!"{t}")
-  let ts := String.intercalate "][" ts
-  s!"[{ts}]"
 
-def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step State :=
+def trans (state: State) (inputLine: String) (cl: Bool := true): REPL.Step State :=
   let inputLine := inputLine.trimAscii.toString
 
   if inputLine.length == 0 then
     getStep state
-  else if inputLine == "hint" then
-    match state.stack with
-      | [] => getStep state "no goal to hint"
-      | g :: _ =>
-        let ts := Auto.getAllAvailTactics g (checkAhead := True)
-        getStep state s!"hint: {toStringTs ts}"
   else
     match Parser.parsePrefixAndThen "auto " String.toNat? inputLine with
       | some depth =>
@@ -81,7 +85,7 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
         match Parser.parseTactic? inputLine with
           | none => getStep state "parse error"
           | some tactic =>
-              match tactic.resolveState? classical_logic state with
+              match tactic.resolveState? cl state with
                 | none => getStep state "resolve error"
                 | some newState => getStep newState
 
