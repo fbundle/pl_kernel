@@ -2,24 +2,26 @@ import PropLogicKernel.Kernel
 
 namespace PropLogicKernel.ListMap
 
-def ListMap α β [BEq α] := List (α × β)
 
-def ListMap.get? [BEq α] (map: ListMap α β) (key: α): Option β :=
-  match map with
+
+structure ListMap α β where
+  data: List (α × β)
+  deriving BEq
+
+partial def ListMap.get? [BEq α] (map: ListMap α β) (key: α): Option β :=
+  match map.data with
     | [] => none
     | (k, v) :: xs =>
       if k == key then
         some v
       else
-        get? xs key
+        get? {data := xs} key
 
 instance: Ctx (ListMap Nat P) where
-  empty := []
-  set := λ (map: ListMap Nat P) (key: Nat) (val: P) => (key, val) :: map
-  iter := λ (map: ListMap Nat P) => map
+  empty := {data := []}
+  set := λ (map: ListMap Nat P) (key: Nat) (val: P) => {data := (key, val) :: map.data}
+  iter := λ (map: ListMap Nat P) => map.data
   get? := ListMap.get?
 
-instance [BEq α] [BEq β] : BEq (ListMap α β) :=
-  inferInstanceAs (BEq (List (α × β)))
 
 end PropLogicKernel.ListMap
