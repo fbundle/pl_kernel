@@ -54,6 +54,11 @@ def init: REPL.Step State :=
     stack := []
   }
 
+def toStringTs (ts: List T): String :=
+  let ts := ts.map (λ t => s!"{t}")
+  let ts := String.intercalate "][" ts
+  s!"[{ts}]"
+
 def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step State :=
   let inputLine := inputLine.trimAscii.toString
 
@@ -63,10 +68,8 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
     match state.stack with
       | [] => getStep state "no goal to hint"
       | g :: _ =>
-        let ts := Auto.getAllAvailTactics g (skipOneCycle := False)
-        let ts := ts.map (λ t => s!"{t}")
-        let ts := String.intercalate "][" ts
-        getStep state s!"hint: [{ts}]"
+        let ts := Auto.getAllAvailTactics g (checkAhead := True)
+        getStep state s!"hint: [{toStringTs ts}]"
 
   else
     match Parser.parseTactic? inputLine with
