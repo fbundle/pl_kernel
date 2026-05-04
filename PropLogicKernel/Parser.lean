@@ -142,19 +142,12 @@ def parseProp: ParsePropFunc := λ xs => parseImp (xs.filter (λ x => ¬ x.isWhi
 def ParseTacticFunc := ParseFunc T
 
 def parseExactString (s: String): ParseFunc String :=
-  let pList: List (ParseFunc Char) := s.toList.map parseExact
-
-  match pList.getLast? with
-    | none => -- s is empty - just fail - because we don't allow any parser that consume nothing
-      parseFail
-    | some pLast =>
-      let p: ParseFunc (List Char) := (pList.dropLast).foldr (λ p1 p2 =>
-        (p1.concat p2).map (λ (v1, v2List) => v1 :: v2List) -- right fold make this easier to write
-      ) (pLast.map (λ ch => [ch]))
-
-      let p: ParseFunc String := p.map (λ chList => String.ofList chList)
-      p
-
+  let sList := s.toList
+  λ (xs: List Char) =>
+    if xs.take sList.length == sList then
+      some (s, xs.drop sList.length)
+    else
+      none
 
 
 
