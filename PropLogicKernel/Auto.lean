@@ -52,54 +52,50 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
 def equalGoals [Ctx α] (g1: G α) (g2: G α): Bool :=
   (canonicalizeGoal g1) == (canonicalizeGoal g2)
 
+def cartesian (xs : List α) (ys : List β) : List (α × β) :=
+  let rec loop (prod: List (α × β)) (xs: List α): List (α × β) :=
+    match xs with
+      | [] => prod
+      | x :: rest =>
+        loop ((ys.map (λ y => (x, y))) ++ prod) rest
+
+  loop [] xs
+
+#eval cartesian [1, 2, 3] [4, 5, 6]
+
+
 def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
   let tacticList: List T := []
+
+  -- tactic with params
+  let nList: List Nat := (Ctx.iter g.hyp).map (λ (n, _) => n)
+  let methodList: List (Nat → T) := [T.refine, T.cases]
+  let tList: List T := (cartesian methodList nList).map (λ (method, n) => method n)
+
+  let tacticList := if ¬ checkAhead then
+    tList ++ tacticList
+  else
+    let rec loop (tacticList: List T) (tList: List T): List T :=
+      match tList with
+        | [] => tacticList
+        | t :: rest =>
+          match t.resolveGoal? 0 false g with
+            | none => loop tacticList rest -- cannot resolve, loop
+            | some (_, g2 :: []) =>
+              if equalGoals g2 g then -- prevent one step loop
+                loop tacticList rest
+              else
+                loop (t :: tacticList) rest -- resolve ok
+            | _ => loop (t :: tacticList) rest -- resolve ok
+
+    loop tacticList tList
+
+  -- tactic without params
   let tacticList := match g.goal with
     | (.imp _ _) => T.intro :: tacticList
     | (.and _ _) => T.constructor :: tacticList
     | (.or _ _) => T.left :: T.right :: tacticList
     | _ => tacticList
-
-  -- refine
-  let method: Nat → T := T.refine
-
-  let rec loop1 (hyp: List (Nat × P)) (tacticList: List T): List T :=
-    match hyp with
-      | [] => tacticList
-      | (n, _) :: rest =>
-        let t := method n
-        let newTacticList: List T :=
-          if ¬ checkAhead then (t :: tacticList) else
-          -- try to resolve t
-          match t.resolveGoal? 0 False g with -- it doesn't matter what we set for (vc : Nat) (cl : Bool)
-            | none => tacticList -- cannot resolve do nothing
-            | some (_, g2s) =>
-              match g2s with
-                | g2 :: [] =>
-                  if equalGoals g2 g then
-                    tacticList -- prevent 1-step infinite loop
-                  else
-                    (t :: tacticList) -- resolve ok, add t and loop
-                | _ =>
-                  (t :: tacticList) -- resolve ok, add t and loop
-
-        loop1 rest newTacticList
-
-  let tacticList := loop1 (Ctx.iter g.hyp) tacticList
-
-  -- cases tactic
-  let rec loop2 (hyp: List (Nat × P)) (tacticList: List T): List T :=
-    match hyp with
-      | [] => tacticList
-      | (n, p) :: rest =>
-        let t := T.cases n
-        match p with
-          | .and _ _ => loop2 rest (t :: tacticList)
-          | .or _ _ => loop2 rest (t :: tacticList)
-          -- | .fals => loop2 rest (t :: tacticList) -- we already refine - this is dup
-          | _ => loop2 rest tacticList
-
-  let tacticList := loop2 (Ctx.iter g.hyp) tacticList
 
   tacticList
 
