@@ -176,9 +176,9 @@ partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Opti
 
 -- state
 structure S (α: Type) [Ctx α] where
-  varCount: Nat
-  sorrCount: Nat
-  newCount: Nat
+  varCount: Nat   -- handled by tactic
+  sorrCount: Nat  -- handled by REPL
+  newCount: Nat   -- handled by REPL
   stack: List (G α)
 
 def T.resolveState? [Ctx α] (t: T) (cl: Bool) (s: S α): Option (S α) :=
