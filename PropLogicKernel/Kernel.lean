@@ -123,7 +123,9 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
         {g with goal := .imp B1 B},
       ])
 
-    -- combine exact, apply, bridge
+    -- combine exact, apply, bridge, and ex falso quodlibet
+    | (_, .refine n, some (.fals)) =>
+      some (vc, [])
     | (_, .refine n, _) =>
       T.resolveGoal? (.exact n) vc cl g
       <|>
