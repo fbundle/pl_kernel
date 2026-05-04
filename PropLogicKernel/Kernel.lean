@@ -35,7 +35,7 @@ inductive T where
   -- if goal is B and h: A1 → B1
   -- split into two goals A1 and (B1 → B)
   | bridge (n: Nat): T
-  -- combine exact, apply, bridge
+  -- combine exact, apply, bridge, and ex falso quodlibet
   | refine (n: Nat): T
   -- if goal is A ∧ B
   -- split into two goals A and B
