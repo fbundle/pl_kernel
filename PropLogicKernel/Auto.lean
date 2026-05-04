@@ -61,7 +61,7 @@ def cartesian (xs : List α) (ys : List β) (prod: Array (α × β) := #[]) : Li
 
 #eval cartesian [1, 2, 3] ["a", "b", "c"]
 
-def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
+def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True) (cl: Bool := False): List T :=
   -- tactic without params
   let tList: Array T := #[T.intro, T.constructor, T.left, T.right]
 
@@ -69,6 +69,12 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
   let nList: List Nat := (Ctx.iter g.hyp).map (λ (n, _) => n)
   let mList: List (Nat → T) := [T.cases, T.exact, T.apply, T.compose]
   let tList: Array T := tList ++ (cartesian mList nList).map (λ (method, n) => method n)
+
+  -- lem
+  let tList := if cl then
+    tList ++ ((getAllAtomsOfGoal g).map (T.lem ∘ P.var))
+  else
+    tList
 
 
   let tList: List T := tList.toList
@@ -118,7 +124,7 @@ partial def dfs
 
   loop (neighbourFunc state)
 
-def solveWithDepth? [Ctx α] (maxDepth: Nat) (s: S α): Option (S α ×List T) := do
+def solveWithDepth? [Ctx α] (maxDepth: Nat) (s: S α) (cl: Bool := False): Option (S α ×List T) := do
   dfs (α := S α × List T) (β := T)
     (goalState := λ ((s, _): S α × List T) => s.stack.length == 0)
     (transitionFunc := λ (s, ts) t => do
@@ -142,15 +148,15 @@ def solveWithDepth? [Ctx α] (maxDepth: Nat) (s: S α): Option (S α ×List T) :
       if ts.length >= maxDepth then [] else
       match s.stack with
         | [] => []
-        | g :: _ => getAllAvailTactics g (checkAhead := False)
+        | g :: _ => getAllAvailTactics g (checkAhead := False) (cl := cl)
     )
     (s, [])
 
-partial def autoSolveWithMaxDepth? [Ctx α] (maxDepth: Nat) (s: S α): Option (S α × List T) :=
+partial def autoSolveWithMaxDepth? [Ctx α] (maxDepth: Nat) (s: S α) (cl: Bool := False): Option (S α × List T) :=
   -- iterative deepening depth-first search
   let rec loop (depth: Nat): Option (S α × List T) :=
     if depth > maxDepth then none else
-    match solveWithDepth? (maxDepth := depth) s with
+    match solveWithDepth? depth s (cl := cl) with
       | none => loop (depth + 1)
       | some (newS, path) => some (newS, path)
 
