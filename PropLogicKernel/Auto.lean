@@ -74,22 +74,25 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool): List T :=
   let tList: List T := tArray.toList
 
   if ¬ checkAhead then tList else
-  let rec loop (tList: List T) (tListAcc: Array T): List T :=
-      match tList with
-        | [] => tListAcc.toList
-        | t :: rest =>
-          match t.resolveGoal? 0 false g with
-            | none => loop rest tListAcc -- cannot resolve, loop
-            | some (_, g2 :: []) =>
-              if equalGoals g2 g then -- prevent one step loop
-                loop rest tListAcc
-              else
-                loop rest (tListAcc.push t)  -- resolve ok
-            | _ => loop rest (tListAcc.push t)  -- resolve ok
+  let rec loop (tList: List T) (headTListAcc: Array T) (tListAcc: Array T): List T :=
+    -- headTListAcc are those that can resolve goal immediately
+    -- higher priority accumulation
+    match tList with
+      | [] => (headTListAcc ++ tListAcc).toList
+      | t :: rest =>
+        match t.resolveGoal? 0 false g with
+          | none => loop rest headTListAcc tListAcc -- cannot resolve, loop
+          | some (_, g2 :: []) =>
+            if equalGoals g2 g then -- prevent one step loop
+              loop rest headTListAcc tListAcc
+            else
+              loop rest headTListAcc (tListAcc.push t)  -- resolve ok
+          | some (_, []) =>
+              loop rest (headTListAcc.push t) tListAcc -- resolve in one step
+          | _ => loop rest headTListAcc (tListAcc.push t)  -- resolve ok
 
 
-  let tList: List T := loop tList #[]
-  tList
+  loop tList #[] #[]
 
 partial def dfs
   (goalState: α → Bool)
