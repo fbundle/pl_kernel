@@ -37,16 +37,16 @@ def getStep (s: State) (message?: Option String := none) (hint: Bool := true): R
     [s!"new_count {s.newCount} sorry_count {s.sorrCount} var_count {s.varCount} goals_remaining {s.stack.length}"]
 
   let status: List String :=
-    if ¬ hint then status else
-      match s.stack with
-        | [] => status
-        | g :: _ =>
-          let ts := Auto.getAllAvailTactics g (checkAhead := True)
-          s!"hint: {toStringTs ts}" :: status
-
-  let status: List String :=
-    if ¬ isAllGoalsAccomplished s then status else
+    if isAllGoalsAccomplished s then
       status ++ ["all goals accomplished!"]
+    else if hint then
+      match s.stack with
+      | [] => status
+      | g :: _ =>
+        let ts := Auto.getAllAvailTactics g (checkAhead := True)
+        status ++ [s!"hint: {toStringTs ts}"]
+    else
+      status
 
   let status: List String :=
     match message? with
