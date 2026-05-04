@@ -88,7 +88,7 @@ def handleAuto? (state: State) (inputLine: String) : Option (REPL.Step State) :=
   match Parser.parsePrefixAndThen "auto " String.toNat? inputLine with
     | some depth =>
       match Auto.autoSolveWithMaxDepth? depth state with
-        | some path => getStep state s!"solved: {toStringTs path.reverse}"
+        | some (newS, path) => getStep state s!"solved: {toStringTs path.reverse}"
         | none => getStep state s!"unsolvable with depth {depth}"
     | _ => none
 

@@ -118,8 +118,8 @@ partial def dfs
 
   loop (neighbourFunc state)
 
-def solveWithDepth? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) := do
-  let (_, ts) ← dfs (α := S α × List T) (β := T)
+def solveWithDepth? [Ctx α] (maxDepth: Nat) (s: S α): Option (S α ×List T) := do
+  dfs (α := S α × List T) (β := T)
     (goalState := λ ((s, _): S α × List T) => s.stack.length == 0)
     (transitionFunc := λ (s, ts) t => do
       -- no transition at maxDepth
@@ -146,15 +146,13 @@ def solveWithDepth? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) := do
     )
     (s, [])
 
-  return ts
-
-partial def autoSolveWithMaxDepth? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) :=
+partial def autoSolveWithMaxDepth? [Ctx α] (maxDepth: Nat) (s: S α): Option (S α × List T) :=
   -- iterative deepening depth-first search
-  let rec loop (depth: Nat): Option (List T) :=
+  let rec loop (depth: Nat): Option (S α × List T) :=
     if depth > maxDepth then none else
     match solveWithDepth? (maxDepth := depth) s with
       | none => loop (depth + 1)
-      | some path => some path
+      | some (newS, path) => some (newS, path)
 
   loop 1
 
