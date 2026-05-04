@@ -49,6 +49,9 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
     goal := g.goal,
   }
 
+def equalGoals [Ctx α] (g1: G α) (g2: G α): Bool :=
+  (canonicalizeGoal g1) == (canonicalizeGoal g2)
+
 def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
   let tacticList: List T := []
   let tacticList := match g.goal with
@@ -74,7 +77,7 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
             | some (_, g2s) =>
               match g2s with
                 | g2 :: [] =>
-                  if (canonicalizeGoal g2) == (canonicalizeGoal g) then
+                  if equalGoals g2 g then
                     tacticList -- prevent 1-step infinite loop
                   else
                     (t :: tacticList) -- resolve ok, add t and loop
@@ -103,7 +106,7 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
 
 partial def dfs
   (goalState: α → Bool)
-  (transitionFunc: α → β → α)
+  (transitionFunc: α → β → Option α)
   (neighbourFunc: α → List β)
   (maxDepth: Nat)
   (state: α)
@@ -113,27 +116,48 @@ partial def dfs
   if goalState state then some state else
 
 
-  let rec loop (actions: List β): Option α :=
+  let rec loop (actions: List β): Option α := do
     match actions with
-      | [] => none
+      | [] => failure
       | action :: rest =>
+        let nextState ← transitionFunc state action
         match dfs
           goalState
           transitionFunc
           neighbourFunc
           (maxDepth := maxDepth -1)
-          (transitionFunc state action)
+          nextState
         with
           | none => loop rest -- try other branches
-          | some goal => goal
+          | some goal => return goal
 
   loop (neighbourFunc state)
 
-def autoResolve? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) :=
-  let gs := dfs (α := S α × List T) (β := T)
+def autoResolve? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) := do
+  let (_, ts) ← dfs (α := S α × List T) (β := T)
     (goalState := λ ((s, ts): S α × List T) => s.stack.length == 0)
-    (transitionFunc := )
-  sorry
+    (transitionFunc := λ (s, ts) t => do
+      let s2 ← t.resolveState? (cl := False) s
+      -- prevent one step loop
+      if s.stack.length == s2.stack.length then
+        let g1 ← s.stack.head?
+        let g2 ← s2.stack.head?
+        if equalGoals g1 g2 then
+          failure
+        else
+          return (s2, t :: ts)
+      else
+        return (s2, t :: ts)
+    )
+    (neighbourFunc := λ (s, ts) =>
+      match s.stack with
+        | [] => []
+        | g :: _ => getAllAvailTactics g
+    )
+    (maxDepth := maxDepth)
+    (s, [])
+
+  return ts
 
 
 
