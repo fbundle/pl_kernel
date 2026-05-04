@@ -36,7 +36,10 @@ def getStep (s: State) (message?: Option String := none) (hint: Bool := true): R
   let status: List String := []
 
   let status: List String := if s.newCount == 0 then
-    status ++ ["type `new <prop>` input a new goal and `auto <depth>` for auto search"]
+    status ++ [
+      "type `new <prop>` input a new goal and `auto <max_depth>` for search",
+      "tactics available: `intro` `exact` `apply` `bridge` `constructor` `left` `right` `cases` `lem` `refine` `sorry`"
+    ]
   else
     status
   let status: List String :=
