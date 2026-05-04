@@ -171,4 +171,15 @@ def parseTactic? (s: String): Option T :=
   parsePrefixAndThen "new " (λ ss => (parseProp? ss).map T.new) s
 
 
+
+#eval parseTactic? "intro"
+#eval parseTactic? "constructor"
+#eval parseTactic? "apply 0"
+#eval parseTactic? "bridge 1"
+#eval parseTactic? "refine 2"
+#eval parseTactic? "cases 3"
+#eval parseTactic? "lem A ∨ B"
+#eval parseTactic? "new P ∧ Q"
+#eval parseTactic? "sorry"
+
 end PropLogicKernel.Parser
