@@ -38,7 +38,7 @@ def getStep (s: State) (message?: Option String := none) (hint: Bool := true): R
   let status: List String := if s.newCount == 0 then
     status ++ [
       "type `new <prop>` input a new goal and `auto <max_depth>` for search",
-      "tactics available: `intro` `exact` `apply` `compose` `constructor` `left` `right` `cases` `lem` `refine` `sorry` `new`"
+      "tactics available: `intro` `exact` `apply` `compose` `constructor` `left` `right` `cases` `lem`"
     ]
   else
     status
@@ -78,25 +78,64 @@ def init: REPL.Step State :=
   }
 
 
-def trans (state: State) (inputLine: String) (cl: Bool := true): REPL.Step State :=
-  let inputLine := inputLine.trimAscii.toString
-
+def handleEmpty? (state: State) (inputLine: String): Option (REPL.Step State) :=
   if inputLine.length == 0 then
     getStep state
   else
-    match Parser.parsePrefixAndThen "auto " String.toNat? inputLine with
-      | some depth =>
-        match Auto.autoSolveWithMaxDepth? depth state with
-          | some path =>
-            getStep state s!"solved: {toStringTs path.reverse}"
-          | none => getStep state s!"unsolvable with depth {depth}"
-      | _ =>
-        match Parser.parseTactic? inputLine with
-          | none => getStep state "parse error"
-          | some tactic =>
-              match tactic.resolveState? cl state with
-                | none => getStep state "resolve error"
-                | some newState => getStep newState
+    none
+
+def handleAuto? (state: State) (inputLine: String) : Option (REPL.Step State) :=
+  match Parser.parsePrefixAndThen "auto " String.toNat? inputLine with
+    | some depth =>
+      match Auto.autoSolveWithMaxDepth? depth state with
+        | some path => getStep state s!"solved: {toStringTs path.reverse}"
+        | none => getStep state s!"unsolvable with depth {depth}"
+    | _ => none
+
+def handleNew? (state: State) (inputLine: String) : Option (REPL.Step State) :=
+  match Parser.parsePrefixAndThen "new " Parser.parseProp? inputLine with
+    | some p =>
+    getStep {state with
+      newCount := state.newCount + 1,
+      stack := {hyp := Ctx.empty , goal := p} :: state.stack,
+    }
+    | _ => none
+
+def handleSorry? (state: State) (inputLine: String) : Option (REPL.Step State) :=
+  if inputLine == "sorry" then
+    getStep {state with
+      sorrCount := state.sorrCount + 1,
+      stack := state.stack.drop 1,
+    }
+  else
+    none
+
+def handleTactic? (state: State) (inputLine: String) (cl: Bool := true) : REPL.Step State :=
+  match Parser.parseTactic? inputLine with
+    | none => getStep state "parse error"
+    | some tactic =>
+        match tactic.resolveState? cl state with
+          | none => getStep state "resolve error"
+          | some newState => getStep newState
+
+
+
+def trans (state: State) (inputLine: String): REPL.Step State :=
+  let inputLine := inputLine.trimAscii.toString
+
+  let newState? :=
+  handleEmpty? state inputLine
+  <|>
+  handleAuto? state inputLine
+  <|>
+  handleNew? state inputLine
+  <|>
+  handleSorry? state inputLine
+
+  match newState? with
+    | some newState => newState
+    | none => handleTactic? state inputLine
+
 
 
 end PropLogicKernel.REPL
