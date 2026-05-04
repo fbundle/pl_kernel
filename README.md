@@ -1,112 +1,58 @@
-# PropLogicKernel
+# PropLogicKernel: A Formal Propositional Logic System in Lean 4
 
-A propositional logic prover kernel implemented in Lean 4, featuring an interactive REPL, automated proof search, and a Python interface for automated puzzle generation and verification.
+PropLogicKernel is a formally verified kernel for propositional logic, implemented in **Lean 4**. It provides a foundational infrastructure for goal-directed natural deduction, automated theorem proving, and interactive proof development.
 
-## Features
+## Core Calculus and Formal Semantics
 
-- **Lean 4 Logic Kernel**: A robust implementation of propositional logic, including:
-  - Core data structures for Propositions (`P`), Tactics (`T`), Goals (`G`), and Proof States (`S`).
-  - Primitive tactics: `intro`, `exact`, `apply`, `constructor`, `left`, `right`, `cases`.
-  - Classical logic support via the Law of Excluded Middle (`lem`).
-- **Interactive REPL**: A command-line interface for manual theorem proving.
-- **Automated Prover**: An iterative deepening depth-first search (DFS) algorithm to automatically find proofs for propositional formulas.
-- **Python Integration**:
-  - `Client` class to interact with the Lean-based kernel.
-  - Puzzle generation and verification tools.
-  - Support for creating and uploading datasets to Hugging Face.
+The system is built upon a tactic-based natural deduction framework. It supports both intuitionistic and classical propositional logic.
 
-## Technical Specifications
+### Syntax
+The language of propositions $\mathcal{P}$ is defined inductively:
+- **Bottom ($\bot$)**: The contradiction `fals`.
+- **Variables**: Atomic propositions defined by strings.
+- **Conjunction ($A \wedge B$)**: `and(A, B)`.
+- **Disjunction ($A \vee B$)**: `or(A, B)`.
+- **Implication ($A \to B$)**: `imp(A, B)`.
 
-### Theorem Verifier Logic
+### Proof State and Goals
+A **Goal** $G$ is a pair $\langle \Gamma, \phi \rangle$, where $\Gamma$ is a context of hypotheses (a mapping from indices to propositions) and $\phi \in \mathcal{P}$ is the target proposition. The **Proof State** $S$ is a stack of goals $[G_1, G_2, \dots, G_n]$. A theorem is considered formally proven when the stack is empty.
 
-The kernel operates on a **Proof State** (`S`), which maintains a stack of **Goals** (`G`). Each goal consists of a target **Proposition** (`P`) and a **Context** (`Ctx`) containing hypotheses.
+### Tactic Semantics
+Tactics $T$ define state transitions $S \xrightarrow{T} S'$. The kernel implements the following inference rules:
 
-The verification process follows a goal-directed reasoning approach:
-1.  **State Transition**: A **Tactic** (`T`) is applied to the top goal of the stack.
-2.  **Goal Resolution**: The tactic either:
-    - Resolves the goal (removing it from the stack).
-    - Decomposes the goal into one or more sub-goals (replacing the top goal with new ones).
-    - Modifies the context by adding new hypotheses.
-3.  **Completion**: A theorem is considered proven when the goal stack is empty.
-
-### Tactics
-
-| Tactic | Description | Logic |
+| Tactic | Logical Rule | Operational Semantics |
 | :--- | :--- | :--- |
-| `intro` | Introduction of implication | If goal is `A → B`, adds hypothesis `h: A` and changes goal to `B`. |
-| `exact n` | Exact match | If goal is `A` and hypothesis `n` is `A`, the goal is resolved. |
-| `apply n` | Modus Ponens (Backward) | If goal is `B` and hypothesis `n` is `A → B`, changes goal to `A`. |
-| `compose n`| Implication Composition | If goal is `B` and hypothesis `n` is `A1 → B1`, splits into goals `A1` and `B1 → B`. |
-| `constructor`| Conjunction Introduction | If goal is `A ∧ B`, splits into two goals: `A` and `B`. |
-| `left` | Disjunction Introduction | If goal is `A ∨ B`, changes goal to `A`. |
-| `right` | Disjunction Introduction | If goal is `A ∨ B`, changes goal to `B`. |
-| `cases n` | Elimination / Case Split | <ul><li>If `h[n]` is `A ∨ B`, branches into two goals with `A` and `B` as hypotheses respectively.</li><li>If `h[n]` is `A ∧ B`, adds both `A` and `B` as hypotheses.</li><li>If `h[n]` is `⊥` (False), resolves the goal (Ex Falso Quodlibet).</li></ul> |
-| `lem p` | Law of Excluded Middle | Adds hypothesis `¬p ∨ p` to the context (requires classical mode). |
+| `intro` | $\to$-Introduction | Introduces hypothesis $A$ from goal $A \to B$. |
+| `exact n` | Hypothesis Application | Resolves goal $\phi$ if $\Gamma[n] = \phi$. |
+| `apply n` | $\to$-Elimination (Backward) | Reduces goal $B$ to $A$ given $\Gamma[n] = A \to B$. |
+| `constructor`| $\wedge$-Introduction | Splits goal $A \wedge B$ into subgoals $A$ and $B$. |
+| `left`/`right` | $\vee$-Introduction | Reduces goal $A \vee B$ to $A$ or $B$. |
+| `cases n` | Elimination Rules | <ul><li>**$\vee$-Elim**: Splits into cases for $A$ and $B$.</li><li>**$\wedge$-Elim**: Extracts $A$ and $B$ from $A \wedge B$.</li><li>**$\bot$-Elim**: Resolves any goal from a contradiction.</li></ul> |
+| `lem p` | Excluded Middle | Introduces $\neg p \vee p$ (Classical Logic). |
 
-## Installation
+## Automated Theorem Proving
 
-### Prerequisites
+The kernel includes an automated solver (`Auto.lean`) based on **Iterative Deepening Depth-First Search (ID-DFS)**. This strategy ensures completeness for the propositional fragment while managing the search space of proof trees. The solver explores all available tactic applications, prioritizing those that resolve goals immediately or reduce complexity.
 
-- **Lean 4**: Install using [elan](https://github.com/leanprover/elan).
-- **Python 3.10+**: Recommended to use [uv](https://github.com/astral-sh/uv) for dependency management.
+## Implementation Details
 
-### Build Lean Kernel
+The project is structured into modular Lean 4 components:
+- **`PropLogicKernel/Kernel.lean`**: The core logical kernel defining the inductive types and transition rules.
+- **`PropLogicKernel/Auto.lean`**: The automated search engine and tactic discovery logic.
+- **`PropLogicKernel/Parser.lean`**: A functional parser combinator implementation for serialized propositions and tactics.
+- **`PropLogicKernel/Printer.lean`**: A precedence-aware formatter for human-readable logical expressions.
 
+## Build and Interaction
+
+To build the Lean kernel and REPL:
 ```bash
 lake build
-```
-
-### Setup Python Environment
-
-```bash
-uv sync
-```
-
-## Usage
-
-### Interactive REPL
-
-You can run the Lean REPL directly:
-
-```bash
 ./.lake/build/bin/Main
 ```
 
-Or via the Python wrapper:
-
-```bash
-python main.py
-```
-
-### Puzzle Generation
-
-The project includes scripts to generate random propositional logic puzzles:
-
-```bash
-python examples/generate_puzzles.py --out output --num-vars 3 --depth 5 --num-puzzles 100
-```
-
-### Puzzle Verification
-
-Verify the generated puzzles and their proofs:
-
-```bash
-python examples/check_puzzles.py --input output
-```
-
-## Project Structure
-
-- `PropLogicKernel/`: Core Lean 4 implementation of the logic kernel and REPL logic.
-  - `Kernel.lean`: Data structures and tactic logic.
-  - `Auto.lean`: Automated proof search implementation.
-  - `Parser.lean` / `Printer.lean`: Serialization and deserialization of propositions and tactics.
-- `REPL/`: Generic REPL framework in Lean 4.
-- `py_prop_logic_kernel/`: Python package for interacting with the kernel.
-- `examples/`: Scripts for batch processing, puzzle generation, and dataset management.
-- `Main.lean`: Entry point for the Lean executable.
-- `main.py`: Entry point for the Python-wrapped REPL.
-
 ---
 
-## AI Generated Code Disclaimer
-Please note that all Python files in this repository (including `main.py`, `py_prop_logic_kernel/`, and `examples/`) as well as this `README.md` were generated by AI.
+**Technical Disclaimer:**
+This project contains components developed with AI assistance.
+- **Human-Authored**: The entire Lean 4 core (`PropLogicKernel/`, `REPL/`, `Main.lean`).
+- **AI-Generated Wrappers**: All Python integration (`main.py`, `py_prop_logic_kernel/`, `examples/`), the TypeScript port (`ts_prop_logic_kernel/`), and this documentation.
