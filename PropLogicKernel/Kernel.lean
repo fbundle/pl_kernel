@@ -88,6 +88,8 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
       | some n => Map.get? g.hyp n
 
   match (g.goal, t, h?) with
+    -- GOAL RESOLUTION
+
     -- if goal is A → B
     -- add hyp h: A and replace goal with B
     | (.imp A B, .intro, _) =>
@@ -129,6 +131,8 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
       <|>
       T.resolveGoal? (.bridge n) vc cl g
 
+    -- GOAL DECOMPOSITION
+
     -- if goal is A ∧ B
     -- split into two goals A and B
     | (.and A B, .constructor, _) =>
@@ -148,6 +152,8 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
       some (vc, [
         {g with goal := B},
       ])
+
+    -- HYPOTHESIS DECOMPOSITION
 
     -- if h: A ∨ B
     -- branch intro (hyp h₁: A) and (hyp h₂: B)
