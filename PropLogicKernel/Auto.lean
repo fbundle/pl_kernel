@@ -51,7 +51,6 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
 
 def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T :=
 
-
   let tacticList: List T := []
 
   let tacticList := match g.goal with
@@ -63,6 +62,7 @@ def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T 
   -- refine
   let g1: Option CanonicalGoal :=
     if skipOneCycle then none else canonicalizeGoal g
+
   let rec loop1 (hyp: List (Nat × P)) (tacticList: List T): List T :=
     match hyp with
       | [] => tacticList
@@ -74,14 +74,17 @@ def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T 
             | none =>
               tacticList -- cannot resolve do nothing
             | some (_, g2s) =>
-              match g2s with
-                | g2' :: [] =>
-                  if (canonicalizeGoal g2') == g1 then
-                    tacticList -- prevent 1-step infinite loop
-                  else
+              if skipOneCycle then
+                (t :: tacticList) -- resolve ok, add t and loop
+              else
+                match g2s with
+                  | g2' :: [] =>
+                    if (canonicalizeGoal g2') == g1 then
+                      tacticList -- prevent 1-step infinite loop
+                    else
+                      (t :: tacticList) -- resolve ok, add t and loop
+                  | _ =>
                     (t :: tacticList) -- resolve ok, add t and loop
-                | _ =>
-                  (t :: tacticList) -- resolve ok, add t and loop
 
         loop1 rest newTacticList
 
