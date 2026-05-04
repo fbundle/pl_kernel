@@ -83,8 +83,6 @@ def getAllAvailTactics [Ctx α] (g: G α) : List T :=
 
         loop1 rest newTacticList
 
-
-
   let tacticList := loop1 (Ctx.iter g.hyp) tacticList
 
   -- cases tactic
