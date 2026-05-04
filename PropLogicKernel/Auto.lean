@@ -49,9 +49,8 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
     goal := g.goal,
   }
 
--- we don't checkAhead for DFS
+-- we don't checkAhead for search, let the search handle it
 def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
-
   let tacticList: List T := []
   let tacticList := match g.goal with
     | (.imp _ _) => T.intro :: tacticList
@@ -60,6 +59,8 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
     | _ => tacticList
 
   -- refine
+  let method: Nat → T := T.refine
+
   let g1: Option CanonicalGoal :=
     if checkAhead then canonicalizeGoal g else none
 
@@ -67,7 +68,7 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
     match hyp with
       | [] => tacticList
       | (n, _) :: rest =>
-        let t := T.refine n
+        let t := method n
         let newTacticList: List T :=
           if ¬ checkAhead then (t :: tacticList) else
           -- try to resolve t
