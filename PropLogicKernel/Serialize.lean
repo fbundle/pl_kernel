@@ -17,8 +17,8 @@ def eraseAdjacentDups [BEq α] (l: List α): List α :=
         x1 :: eraseAdjacentDups (x2 :: xs)
 
 -- make goal into a string with unique hypotheses
-def canonicalizeGoal [Map α Nat P] (g: G α): G (ListMap Nat P) :=
-  let hypList: List P := (Map.iter g.hyp).map (λ (_, p) => p: Nat × P → P)
+def canonicalizeGoal [Ctx α] (g: G α): G (ListMap Nat P) :=
+  let hypList: List P := (Ctx.iter g.hyp).map (λ (_, p) => p: Nat × P → P)
   let hypList := hypList.mergeSort (λ a b => (compare a b).isLE)
   let hypList := eraseAdjacentDups hypList
 
