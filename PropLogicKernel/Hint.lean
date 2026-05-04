@@ -1,7 +1,7 @@
 import PropLogicKernel.Kernel
 import PropLogicKernel.ListMap
 
-namespace PropLogicKernel.Auto
+namespace PropLogicKernel.Hint
 open PropLogicKernel.ListMap
 
 def getAllAtomsOfProp (p: P) (nameSet: List String): List String :=
@@ -102,4 +102,4 @@ def getAllAvailTactics [Ctx α] (g: G α) : List T :=
   tacticList
 
 
-end PropLogicKernel.Auto
+end PropLogicKernel.Hint
