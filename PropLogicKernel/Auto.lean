@@ -34,8 +34,10 @@ def eraseAdjacentDups [BEq α] (l: List α): List α :=
       else
         x1 :: eraseAdjacentDups (x2 :: xs)
 
+def CanonicalGoal := G (ListMap Nat P) deriving BEq
+
 -- make goal into a string with unique hypotheses
-def canonicalizeGoal [Ctx α] (g: G α): G (ListMap Nat P) :=
+def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
   let hypList: List P := (Ctx.iter g.hyp).map (λ (_, p) => p: Nat × P → P)
   let hypList := hypList.mergeSort (λ a b => (compare a b).isLE)
   let hypList := eraseAdjacentDups hypList
@@ -48,7 +50,7 @@ def canonicalizeGoal [Ctx α] (g: G α): G (ListMap Nat P) :=
   }
 
 def getAllAvailTactics [Ctx α] (g: G α) : List T :=
-  let g1 := canonicalizeGoal g
+  let g1: CanonicalGoal := canonicalizeGoal g
 
   let tacticList: List T := []
 
@@ -71,7 +73,7 @@ def getAllAvailTactics [Ctx α] (g: G α) : List T :=
           | some (_, g2s) =>
             match g2s with
               | g2' :: [] =>
-                let g2 := canonicalizeGoal g2'
+                let g2: CanonicalGoal := canonicalizeGoal g2'
                 if g2 == g1 then
                   loop1 rest tacticList -- prevent 1-step infinite loop
                 else
