@@ -107,35 +107,32 @@ def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T 
   tacticList
 
 partial def dfs
-  (maxDepth: Nat)
-  (state: α × List β)
-  (neighbourFunc: α → List β)
-  (transFunc: α → β → α)
   (goalState: α → Bool)
-: Option (List β) :=
+  (transitionFunc: α → β → α)
+  (neighbourFunc: α → List β)
+  (maxDepth: Nat)
+  (state: α)
+: Option α :=
   if maxDepth == 0 then none else
 
-  let (s, pastActions) := state
-  if goalState s then some pastActions else
+  if goalState state then some state else
 
 
-  let rec loop (candidateActions: List β): Option (List β) :=
-    match candidateActions with
+  let rec loop (actions: List β): Option α :=
+    match actions with
       | [] => none
-      | nextAction :: rest =>
+      | action :: rest =>
         match dfs
-          (maxDepth - 1)
-          (transFunc s nextAction, nextAction :: pastActions)
-          neighbourFunc
-          transFunc
           goalState
-          with
-          | none =>
-            -- try other branches
-            loop rest
-          | some actions => actions
+          transitionFunc
+          neighbourFunc
+          (maxDepth := maxDepth -1)
+          (transitionFunc state action)
+        with
+          | none => loop rest -- try other branches
+          | some goal => goal
 
-  loop (neighbourFunc s)
+  loop (neighbourFunc state)
 
 
 
