@@ -153,7 +153,7 @@ def autoResolve? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) := do
       if ts.length >= maxDepth then [] else
       match s.stack with
         | [] => []
-        | g :: _ => getAllAvailTactics g
+        | g :: _ => getAllAvailTactics g (checkAhead := False)
     )
     (s, [])
 
