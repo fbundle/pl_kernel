@@ -67,19 +67,22 @@ def getAllAvailTactics [Ctx α] (g: G α) : List T :=
       | (n, _) :: rest =>
         let t := T.refine n
         -- try to resolve t
-        match t.resolveGoal? 0 False g with -- it doesn't matter what we set for (vc : Nat) (cl : Bool)
-          | none =>
-            loop1 rest tacticList -- cannot resolve do nothing
-          | some (_, g2s) =>
-            match g2s with
-              | g2' :: [] =>
-                let g2: CanonicalGoal := canonicalizeGoal g2'
-                if g2 == g1 then
-                  loop1 rest tacticList -- prevent 1-step infinite loop
-                else
-                  loop1 rest (t :: tacticList) -- resolve ok, add t and loop
-              | _ =>
-                loop1 rest (t :: tacticList) -- resolve ok, add t and loop
+        let newTacticList: List T :=
+          match t.resolveGoal? 0 False g with -- it doesn't matter what we set for (vc : Nat) (cl : Bool)
+            | none =>
+              tacticList -- cannot resolve do nothing
+            | some (_, g2s) =>
+              match g2s with
+                | g2' :: [] =>
+                  let g2: CanonicalGoal := canonicalizeGoal g2'
+                  if g2 == g1 then
+                    tacticList -- prevent 1-step infinite loop
+                  else
+                    (t :: tacticList) -- resolve ok, add t and loop
+                | _ =>
+                  (t :: tacticList) -- resolve ok, add t and loop
+
+        loop1 rest newTacticList
 
 
 
