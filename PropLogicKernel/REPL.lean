@@ -37,7 +37,7 @@ def getStep (s: State) (message?: Option String := none) (hint: Bool := true): R
 
   let status: List String := if s.newCount == 0 then
     status ++ [
-      "type `new <prop>` input a new goal, `auto <max_depth>` for search and `auto_cl <max_depth>` for search with classical logic",
+      "type `new <prop>` input a new goal and `auto <max_depth>` for search",
       "tactics available: `intro` `exact` `apply` `compose` `constructor` `left` `right` `cases` `lem`"
     ]
   else
@@ -52,7 +52,7 @@ def getStep (s: State) (message?: Option String := none) (hint: Bool := true): R
       match s.stack with
       | [] => status
       | g :: _ =>
-        let ts := Auto.getAllAvailTactics g (checkAhead := True)
+        let ts := Auto.getAllAvailTactics g (checkAhead := true)
         status ++ [s!"hint: {toStringTs ts}"]
     else
       status
@@ -83,14 +83,6 @@ def handleEmpty? (state: State) (inputLine: String): Option (REPL.Step State) :=
     getStep state
   else
     none
-
-def handleAutoCL? (state: State) (inputLine: String) : Option (REPL.Step State) :=
-  match Parser.parsePrefixAndThen "auto_cl " String.toNat? inputLine with
-    | some depth =>
-      match Auto.autoSolveWithMaxDepth? depth state (cl := true) with
-        | some (newS, path) => getStep state s!"solved: {toStringTs path.reverse}"
-        | none => getStep state s!"unsolvable with depth {depth}"
-    | _ => none
 
 def handleAuto? (state: State) (inputLine: String) : Option (REPL.Step State) :=
   match Parser.parsePrefixAndThen "auto " String.toNat? inputLine with
@@ -135,8 +127,6 @@ def trans (state: State) (inputLine: String): REPL.Step State :=
   handleEmpty? state inputLine
   <|>
   handleAuto? state inputLine
-  <|>
-  handleAutoCL? state inputLine
   <|>
   handleNew? state inputLine
   <|>
