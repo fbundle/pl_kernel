@@ -1,162 +1,79 @@
-# PROP-LOGIC-KERNEL
+# PropLogicKernel
 
-This project is a small proposition-logic tactic kernel in Lean, exposed through a line-based REPL.
+A propositional logic prover kernel implemented in Lean 4, featuring an interactive REPL, automated proof search, and a Python interface for automated puzzle generation and verification.
 
-## LEAN MODULE
+## Features
 
-- `PropLogicKernel/Basic.lean`: proposition syntax, tactics, goals, and state
-- `PropLogicKernel/Parser.lean`: parser for propositions and tactic commands (written by cursor)
-- `PropLogicKernel/Resolver.lean`: operational semantics for tactics
-- `PropLogicKernel/Printer.lean`: rendering of propositions, tactics, and goals
-- `PropLogicKernel/REPL.lean`: REPL-level state, status lines, and exit-code policy
-- `REPL/REPL.lean`: generic line-based REPL loop
-- `Main.lean`: executable entrypoint
+- **Lean 4 Logic Kernel**: A robust implementation of propositional logic, including:
+  - Core data structures for Propositions (`P`), Tactics (`T`), Goals (`G`), and Proof States (`S`).
+  - Primitive tactics: `intro`, `exact`, `apply`, `constructor`, `left`, `right`, `cases`.
+  - Classical logic support via the Law of Excluded Middle (`lem`).
+- **Interactive REPL**: A command-line interface for manual theorem proving.
+- **Automated Prover**: An iterative deepening depth-first search (DFS) algorithm to automatically find proofs for propositional formulas.
+- **Python Integration**:
+  - `Client` class to interact with the Lean-based kernel.
+  - Puzzle generation and verification tools.
+  - Support for creating and uploading datasets to Hugging Face.
 
-## PROPOSITION SPECIFICATION
+## Installation
 
-A proposition `P` is one of:
+### Prerequisites
 
-- `⊥`
-- atom
-- `A ∧ B`
-- `A ∨ B`
-- `A → B`
+- **Lean 4**: Install using [elan](https://github.com/leanprover/elan).
+- **Python 3.10+**: Recommended to use [uv](https://github.com/astral-sh/uv) for dependency management.
 
-Associativity follows the parser/printer implementation:
+### Build Lean Kernel
 
-- `∧`, `∨`, and `→` are parsed right-associatively
-- parentheses may be used explicitly
+```bash
+lake build
+```
 
-## PARSER SPECIFICATION
+### Setup Python Environment
 
-`PropLogicKernel/Parser.lean` uppercases proposition input before parsing.
+```bash
+uv sync
+```
 
-After uppercasing, proposition input is rejected unless every character is one of:
+## Usage
 
-- whitespace
-- `(`, `)`
-- `∧`, `∨`, `→`, `⊥`
-- uppercase letters `A-Z`
-- digits `0-9`
-- underscore `_`
+### Interactive REPL
 
-Atom names are maximal nonempty strings over:
+You can run the Lean REPL directly:
 
-- uppercase letters `A-Z`
-- digits `0-9`
-- underscore `_`
+```bash
+./.lake/build/bin/Main
+```
 
-Examples of valid atom names:
+Or via the Python wrapper:
 
-- `A`
-- `P1`
-- `HELLO_WORLD`
-- `X_2`
+```bash
+python main.py
+```
 
-## GOAL/STATE MODEL
+### Puzzle Generation
 
-A goal consists of:
+The project includes scripts to generate random propositional logic puzzles:
 
-- a set of hypotheses
-- a target proposition
+```bash
+python examples/generate_puzzles.py --out output --num-vars 3 --depth 5 --num-puzzles 100
+```
 
-The state tracks:
+### Puzzle Verification
 
-- a list of goals
-- `varCount`
-- `newCount`
-- `sorrCount`
+Verify the generated puzzles and their proofs:
 
-## TACTIC
+```bash
+python examples/check_puzzles.py --input output
+```
 
-These are the kernel rules implemented by `PropLogicKernel/Resolver.lean`.
+## Project Structure
 
-- `intro`
-  - If goal is `A → B`, add a fresh hypothesis `A` and replace the goal with `B`.
-- `apply n`
-  - If hypothesis `n` is `A → B` and current goal is `B`, replace the goal with `A`.
-- `exact n`
-  - If hypothesis `n` exactly matches the current goal, solve the goal.
-- `constructor`
-  - If goal is `A ∧ B`, split it into two goals.
-- `left`
-  - If goal is `A ∨ B`, replace the goal with `A`.
-- `right`
-  - If goal is `A ∨ B`, replace the goal with `B`.
-- `cases n`
-  - If hypothesis `n` is `A ∨ B`, branch into two goals.
-  - If hypothesis `n` is `A ∧ B`, add both parts as fresh hypotheses.
-  - If hypothesis `n` is `⊥`, solve the goal immediately.
-
-### CLASSICAL LOGIC
-
-- `lem P`
-  - Classical only.
-  - Adds hypothesis `(P → ⊥) ∨ P`.
-- `refine n`
-  - Classical only.
-  - If hypothesis `n` is `A1 → B1` and goal is `B`, replace the current goal with goals `B1 → B` and `A1`.
-
-### APPLICATION LEVEL COMMANDS
-
-- `sorry`
-  - Solves the current goal unconditionally and increments `sorrCount`.
-- `new P`
-  - Pushes a fresh goal `P` and increments `newCount`.
-
-## FAILURE BEHAVIOR
-
-- Parse failures return `parse error`.
-- Resolution failures return an error message and keep the previous state.
-- `lem` and `refine` fail if classical logic is disabled.
-- Any tactic other than `new` fails on an empty goal stack.
-
-## REPL protocol
-
-The executable built by `lake build` runs `REPL.run` from `REPL/REPL.lean`.
-
-For each step:
-
-- write zero or more status/error lines to `stderr`
-- write zero or more output lines to `stdout`
-- write the prompt `> ` to `stderr` with no trailing newline
-- read exactly one newline-terminated line from `stdin`
-- transition to the next state
-
-Status lines are prefixed by `-- `.
-
-Typical status line:
-
-- `-- new_count 1 sorry_count 0 goals_remaining 2`
-
-Success marker:
-
-- `-- all goals accomplished!`
-
-That success marker is emitted iff:
-
-- at least one goal was successfully introduced via `new`
-- no `sorry` was used
-- all goals are solved
-
-## EXIT CODE POLICY
-
-At EOF, `REPL.run` returns the previous step's `code`.
-
-`PropLogicKernel/REPL.lean` sets exit code `0` iff (same with `all goals accomplished!`):
-
-- at least one goal was successfully introduced via `new`
-- no `sorry` was used
-- all goals are solved
-
-Otherwise exit code is `1`.
-
-Parse/resolution errors do not automatically force exit code `1`; they preserve the previous state. So if the kernel is already in a success state, a later failing command can still leave final exit code `0`.
-
-
-## DISCLAIMER: AI GENERATED CODE
-
-The following files were written by Cursor and Claude:
-
-- `README.md`
-- All Python code in this repo (for example: `py_prop_logic_kernel/`)
+- `PropLogicKernel/`: Core Lean 4 implementation of the logic kernel and REPL logic.
+  - `Kernel.lean`: Data structures and tactic logic.
+  - `Auto.lean`: Automated proof search implementation.
+  - `Parser.lean` / `Printer.lean`: Serialization and deserialization of propositions and tactics.
+- `REPL/`: Generic REPL framework in Lean 4.
+- `py_prop_logic_kernel/`: Python package for interacting with the kernel.
+- `examples/`: Scripts for batch processing, puzzle generation, and dataset management.
+- `Main.lean`: Entry point for the Lean executable.
+- `main.py`: Entry point for the Python-wrapped REPL.
