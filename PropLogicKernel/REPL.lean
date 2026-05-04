@@ -10,7 +10,7 @@ open PropLogicKernel
 
 def ListMap α β [BEq α] := List (α × β)
 
-def get? [BEq α] (map: ListMap α β) (key: α): Option β :=
+def ListMap.get? [BEq α] (map: ListMap α β) (key: α): Option β :=
   match map with
     | [] => none
     | (k, v) :: xs =>
@@ -19,18 +19,11 @@ def get? [BEq α] (map: ListMap α β) (key: α): Option β :=
       else
         get? xs key
 
-def set [BEq α] (map: ListMap α β) (key: α) (val: β): ListMap α β :=
-  (key, val) :: map
-
-def iter [BEq α] (map: ListMap α β) := map
-
-def empty [BEq α]: ListMap α β := []
-
 instance[BEq α]: Map (ListMap α β) α β  where
-  empty := empty
-  get? := get?
-  set := set
-  iter := iter
+  empty := []
+  set := λ (map: ListMap α β) (key: α) (val: β) => (key, val) :: map
+  iter := λ (map: ListMap α β) => map
+  get? := ListMap.get?
 
 abbrev State := S (ListMap Nat P)
 
