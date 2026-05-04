@@ -19,4 +19,7 @@ instance: Ctx (ListMap Nat P) where
   iter := λ (map: ListMap Nat P) => map
   get? := ListMap.get?
 
+instance [BEq α] [BEq β] : BEq (ListMap α β) :=
+  inferInstanceAs (BEq (List (α × β)))
+
 end PropLogicKernel.ListMap
