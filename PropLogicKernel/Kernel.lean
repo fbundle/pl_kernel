@@ -26,12 +26,17 @@ inductive T where
   -- if goal is A → B
   -- add hyp h: A and replace goal with B
   | intro: T
-  -- if goal is B and h: A → B
-  -- replace goal with A
-  | apply (h: Nat): T
   -- if goal is A and h: A
   -- goal is accomplished
-  | exact (h: Nat): T
+  | exact (n: Nat): T
+  -- if goal is B and h: A → B
+  -- replace goal with A
+  | apply (n: Nat): T
+  -- if goal is B and h: A1 → B1
+  -- split into two goals A1 and (B1 → B)
+  | bridge (n: Nat): T
+  -- combine exact, apply, bridge
+  | refine (n: Nat): T
   -- if goal is A ∧ B
   -- split into two goals A and B
   | constructor: T
@@ -55,9 +60,6 @@ inductive T where
   -- law of excluded middle
   -- add hyp ¬ A ∨ A
   | lem (p: P): T
-  -- if goal is B and h: A1 → B1
-  -- split into two goals A1 and (B1 → B)
-  | refine (h: Nat): T
 
   -- APPLICATION LEVEL
   -- sorry - just sorry
@@ -73,16 +75,16 @@ structure G (α: Type) [Map α Nat P] where
 def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option (Nat × List (G α)) :=
   -- (h: Option Nat) => (h: Option P)
   let h?: Option P :=
-    let name?: Option Nat :=
+    let n?: Option Nat :=
       match t with
-        | .apply name => some name
-        | .exact name => some name
-        | .cases name => some name
-        | .refine name => some name
+        | .apply n => some n
+        | .exact n => some n
+        | .cases n => some n
+        | .refine n => some n
         | _ => none
-    match name? with
+    match n? with
       | none => none
-      | some name => Map.get? g.hyp name
+      | some n => Map.get? g.hyp n
 
   match (g.goal, t, h?) with
     -- if goal is A → B
@@ -91,6 +93,15 @@ def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option
       some (vc+1, [
         {g with hyp := Map.set g.hyp vc A, goal := B},
       ])
+
+    -- if goal is A and h: A
+    -- goal is accomplished
+    | (A, .exact _, some A1) =>
+      if A == A1 then
+        some (vc, [])
+      else
+        none
+
     -- if goal is B and h: A → B
     -- replace goal with A
     | (B, .apply _, some (.imp A1 B1)) =>
@@ -100,13 +111,22 @@ def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option
         ])
       else
         none
-    -- if goal is A and h: A
-    -- goal is accomplished
-    | (A, .exact _, some A1) =>
-      if A == A1 then
-        some (vc, [])
-      else
-        none
+
+    -- if goal is B and h: A1 → B1
+    -- split into two goals A1 and (B1 → B)
+    | (B, .bridge _, some (.imp A1 B1)) =>
+      some (vc, [
+        {g with goal := A1},
+        {g with goal := .imp B1 B},
+      ])
+
+    -- combine exact, apply, bridge
+    | (B, .refine n, _) =>
+      (T.exact n).resolveGoal? vc cl g
+      <|>
+      (T.apply n).resolveGoal? vc cl g
+      <|>
+      (T.bridge n).resolveGoal? vc cl g
 
     -- if goal is A ∧ B
     -- split into two goals A and B
@@ -155,15 +175,6 @@ def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option
       if ¬ cl then none else
       some (vc + 1, [
         {g with hyp := Map.set g.hyp vc (P.or (.imp A .fals) A)},
-      ])
-
-    -- if goal is B and h: A1 → B1
-    -- split into two goals A1 and (B1 → B)
-    | (B, .refine _, some (.imp A1 B1)) =>
-      if ¬ cl then none else
-      some (vc, [
-        {g with goal := A1},
-        {g with goal := .imp B1 B},
       ])
 
     | _ => none
