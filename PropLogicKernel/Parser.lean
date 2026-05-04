@@ -145,8 +145,7 @@ def parseProp? (s: String): Option P := do
 
 def parsePrefixAndThen (pre: String) (th: String → Option α) (s: String) : Option α :=
   if ¬ s.startsWith pre then none else
-  let s := (s.drop pre.length).toString
-  th s
+  th (s.drop pre.length).toString
 
 def parseTactic? (s: String): Option T :=
   let s := s.trimAscii.toString
