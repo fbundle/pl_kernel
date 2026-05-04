@@ -21,19 +21,6 @@ inductive P where
   | imp (this: P) (that: P): P
   deriving BEq
 
--- goal
-structure G (α: Type) [Map α Nat P] where
-  hyp: α
-  goal: P
-
--- state
-structure S (α: Type) [Map α Nat P] where
-  classical: Bool
-  varCount: Nat
-  sorrCount: Nat
-  newCount: Nat
-  stack: List (G α)
-
 -- tactic
 inductive T where
   -- if goal is A → B
@@ -77,6 +64,11 @@ inductive T where
   | sorr: T
   -- add a goal into the current state
   | new (p: P): T
+
+-- goal
+structure G (α: Type) [Map α Nat P] where
+  hyp: α
+  goal: P
 
 def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option (Nat × List (G α)) :=
   -- (h: Option Nat) => (h: Option P)
@@ -176,10 +168,14 @@ def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option
 
     | _ => none
 
+-- state
+structure S (α: Type) [Map α Nat P] where
+  varCount: Nat
+  sorrCount: Nat
+  newCount: Nat
+  stack: List (G α)
 
-
-
-def T.resolveState? [Map α Nat P] (t: T) (s: S α): Option (S α) :=
+def T.resolveState? [Map α Nat P] (t: T) (cl: Bool) (s: S α): Option (S α) :=
   match (t, s.stack) with
     -- add a goal into the current state
     | (.new C, _) => some
@@ -197,7 +193,7 @@ def T.resolveState? [Map α Nat P] (t: T) (s: S α): Option (S α) :=
 
     -- other tactics act on goal at the top
     | (_, g :: gs) =>
-      match t.resolveGoal? s.varCount s.classical g with
+      match t.resolveGoal? s.varCount cl g with
         | none => none
         | some (vc, ga) => some
           {s with
@@ -206,6 +202,7 @@ def T.resolveState? [Map α Nat P] (t: T) (s: S α): Option (S α) :=
           }
 
     | _ => none
+
 
 
 
