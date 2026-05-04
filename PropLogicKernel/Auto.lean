@@ -39,7 +39,7 @@ def getAllAvailTactics [Map α Nat P] (g: G α) : List T :=
       | (n, _) :: rest =>
         let t := T.refine n
         -- try to resolve t
-        match t.resolveGoal? 0 False g with
+        match t.resolveGoal? 0 False g with -- it doesn't matter what we set for (vc : Nat) (cl : Bool)
           | none => loop1 rest tacticList -- cannot resolve do nothing
           | some _ => loop1 rest (t :: tacticList) -- resolve ok, add t and loop
 
