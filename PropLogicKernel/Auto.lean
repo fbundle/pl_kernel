@@ -74,8 +74,7 @@ def getAllAvailTactics [Ctx α] (g: G α) : List T :=
             | some (_, g2s) =>
               match g2s with
                 | g2' :: [] =>
-                  let g2: CanonicalGoal := canonicalizeGoal g2'
-                  if g2 == g1 then
+                  if (canonicalizeGoal g2') == g1 then
                     tacticList -- prevent 1-step infinite loop
                   else
                     (t :: tacticList) -- resolve ok, add t and loop
