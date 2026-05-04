@@ -72,8 +72,7 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
           if ¬ checkAhead then (t :: tacticList) else
           -- try to resolve t
           match t.resolveGoal? 0 False g with -- it doesn't matter what we set for (vc : Nat) (cl : Bool)
-            | none =>
-              tacticList -- cannot resolve do nothing
+            | none => tacticList -- cannot resolve do nothing
             | some (_, g2s) =>
               match g2s with
                 | g2 :: [] =>
