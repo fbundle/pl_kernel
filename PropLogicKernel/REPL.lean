@@ -2,6 +2,7 @@ import PropLogicKernel.Kernel
 import PropLogicKernel.Parser
 import PropLogicKernel.Printer
 import PropLogicKernel.ListMap
+import PropLogicKernel.Hint
 
 
 import REPL.REPL
@@ -58,6 +59,15 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
 
   if inputLine.length == 0 then
     getStep state
+  else if inputLine == "hint" then
+    match state.stack with
+      | [] => getStep state "no goal to hint"
+      | g :: _ =>
+        let ts := Hint.getAllAvailTactics g
+        let ts := ts.map (λ t => s!"{t}")
+        let ts := String.intercalate "][" ts
+        getStep state s!"hint: [{ts}]"
+
   else
     match Parser.parseTactic? inputLine with
       | none => getStep state "parse error"
