@@ -63,7 +63,7 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
     match state.stack with
       | [] => getStep state "no goal to hint"
       | g :: _ =>
-        let ts := Auto.getAllAvailTactics g
+        let ts := Auto.getAllAvailTactics g (skipOneCycle := False)
         let ts := ts.map (λ t => s!"{t}")
         let ts := String.intercalate "][" ts
         getStep state s!"hint: [{ts}]"
