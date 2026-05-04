@@ -52,7 +52,7 @@ inductive T where
   -- if h: A ∧ B
   -- add hyp (h₁: A) and (h₂: B)
   -- if h: False
-  -- done ex falso quodlibet (from False, anything follows)
+  -- ex falso quodlibet (from False, anything follows)
   -- cases doesn't resolve implication
   | cases (h: Nat): T
 
