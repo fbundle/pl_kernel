@@ -130,18 +130,17 @@ partial def parseImp: ParsePropFunc := makeRightAssocParseFunc parseOr '→' (ma
 end
 
 
-def parseProp: ParsePropFunc := λ xs => parseImp (xs.filter (λ x => ¬ x.isWhitespace))
-
-#eval parseProp "A → ⊥".toList
-#eval parseProp "A ∧ B → B ∧ A".toList
-#eval parseProp "(A → B) ∧ ¬ B → ¬ A".toList
-#eval parseProp "A → (A → B) → (A → C) → (B ∨ C → D) → D".toList
-#eval parseProp "¬¬P → P".toList
-
-
 def parseProp? (s: String): Option P := do
-  let (p, _) ← parseProp s.toList
+  let xs := s.toList.filter (λ x => ¬ x.isWhitespace)
+  let (p, _) ← parseImp xs
   return p
+
+#eval parseProp? "A → ⊥"
+#eval parseProp? "A ∧ B → B ∧ A"
+#eval parseProp? "(A → B) ∧ ¬ B → ¬ A"
+#eval parseProp? "A → (A → B) → (A → C) → (B ∨ C → D) → D"
+#eval parseProp? "¬¬P → P"
+
 
 def parsePrefixAndThen (pre: String) (th: String → Option α) (s: String) : Option α :=
   if ¬ s.startsWith pre then none else
