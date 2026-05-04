@@ -123,15 +123,26 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
         {g with goal := .imp B1 B},
       ])
 
-    -- combine exact, apply, bridge, and ex falso quodlibet
-    | (_, .refine _, some (.fals)) =>
-      some (vc, [])
-    | (_, .refine n, _) =>
-      T.resolveGoal? (.exact n) vc cl g
-      <|>
-      T.resolveGoal? (.apply n) vc cl g
-      <|>
-      T.resolveGoal? (.bridge n) vc cl g
+    -- combine bridge, apply, exact, and ex falso quodlibet
+    | (B, .refine _, some C1) =>
+      if C1 == .fals then
+        some (vc, []) -- ex falso quodlibet
+      else if B == C1 then
+        some (vc, []) -- exact
+      else
+        match C1 with
+          | .imp A1 B1 =>
+            if B == B1 then
+              -- apply
+              some (vc, [
+                {g with goal := A1},
+              ])
+            else
+              some (vc, [
+                {g with goal := A1},
+                {g with goal := .imp B1 B},
+              ])
+          | _ => none
 
     -- GOAL DECOMPOSITION
 
