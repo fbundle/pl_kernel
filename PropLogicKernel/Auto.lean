@@ -108,11 +108,8 @@ partial def dfs
   (goalState: α → Bool)
   (transitionFunc: α → β → Option α)
   (neighbourFunc: α → List β)
-  (maxDepth: Nat)
   (state: α)
 : Option α :=
-  if maxDepth == 0 then none else
-
   if goalState state then some state else
 
 
@@ -125,7 +122,6 @@ partial def dfs
           goalState
           transitionFunc
           neighbourFunc
-          (maxDepth := maxDepth -1)
           nextState
         with
           | none => loop rest -- try other branches
@@ -135,8 +131,11 @@ partial def dfs
 
 def autoResolve? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) := do
   let (_, ts) ← dfs (α := S α × List T) (β := T)
-    (goalState := λ ((s, ts): S α × List T) => s.stack.length == 0)
+    (goalState := λ ((s, _): S α × List T) => s.stack.length == 0)
     (transitionFunc := λ (s, ts) t => do
+      -- no transition at maxDepth
+      if ts.length >= maxDepth then failure else
+
       let s2 ← t.resolveState? (cl := False) s
       -- prevent one step loop
       if s.stack.length == s2.stack.length then
@@ -150,11 +149,12 @@ def autoResolve? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) := do
         return (s2, t :: ts)
     )
     (neighbourFunc := λ (s, ts) =>
+      -- no neighbourhood at maxDepth
+      if ts.length >= maxDepth then [] else
       match s.stack with
         | [] => []
         | g :: _ => getAllAvailTactics g
     )
-    (maxDepth := maxDepth)
     (s, [])
 
   return ts
