@@ -77,6 +77,7 @@ class Ctx (α: Type u) where
 structure G (α: Type) [Ctx α] where
   hyp: α
   goal: P
+  deriving BEq
 
 partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option (Nat × List (G α)) :=
   -- (h: Option Nat) => (h: Option P)
