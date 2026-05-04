@@ -53,8 +53,21 @@ def getStep (h: Hist) (message?: Option String := none) (hint: Bool := true): RE
 
   let status: List String := if s.newCount == 0 then
     status ++ [
-      "type `new <prop>` input a new goal and `auto <max_depth>` for search",
-      "tactics available: `intro` `exact` `apply` `compose` `constructor` `left` `right` `cases` `lem`"
+      "commands available:",
+      "\tnew (p: P)       \t input new goal",
+      "\tundo             \t undo last action",
+      "\tsorry            \t sorry",
+      "\tauto (d: Nat)    \t search",
+      "tactics available:",
+      "\tintro            \t ",
+      "\texact (h: Nat)   \t ",
+      "\tapply (h: Nat)   \t ",
+      "\tcompose (h: Nat) \t ",
+      "\tconstructor      \t ",
+      "\tleft             \t ",
+      "\tright            \t ",
+      "\tcases (h: Nat)   \t ",
+      "\tlem (p: P)       \t ",
     ]
   else
     status
