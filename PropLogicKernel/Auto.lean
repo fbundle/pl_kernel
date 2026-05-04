@@ -49,7 +49,7 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
     goal := g.goal,
   }
 
--- we only set skipOneCycle = True when doing DFS
+-- we only set skipOneCycle = True when doing DFS large problems but shallow depth
 def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T :=
 
   let tacticList: List T := []
