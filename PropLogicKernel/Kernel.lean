@@ -132,12 +132,13 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
       else
         match C1 with
           | .imp A1 B1 =>
-            if B == B1 then
-              -- apply
+            if B1 == .fals ∨ B == B1 then
+              -- apply (with B1 == ⊥)
               some (vc, [
                 {g with goal := A1},
               ])
             else
+              -- bridge
               some (vc, [
                 {g with goal := A1},
                 {g with goal := .imp B1 B},
