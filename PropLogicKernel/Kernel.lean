@@ -72,7 +72,7 @@ structure G (α: Type) [Map α Nat P] where
   hyp: α
   goal: P
 
-def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option (Nat × List (G α)) :=
+partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option (Nat × List (G α)) :=
   -- (h: Option Nat) => (h: Option P)
   let h?: Option P :=
     let n?: Option Nat :=
@@ -121,12 +121,12 @@ def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α): Option
       ])
 
     -- combine exact, apply, bridge
-    | (B, .refine n, _) =>
-      (T.exact n).resolveGoal? vc cl g
+    | (_, .refine n, _) =>
+      T.resolveGoal? (.exact n) vc cl g
       <|>
-      (T.apply n).resolveGoal? vc cl g
+      T.resolveGoal? (.apply n) vc cl g
       <|>
-      (T.bridge n).resolveGoal? vc cl g
+      T.resolveGoal? (.bridge n) vc cl g
 
     -- if goal is A ∧ B
     -- split into two goals A and B
