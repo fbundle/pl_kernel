@@ -53,7 +53,6 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
 def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T :=
 
   let tacticList: List T := []
-
   let tacticList := match g.goal with
     | (.imp _ _) => T.intro :: tacticList
     | (.and _ _) => T.constructor :: tacticList
@@ -106,6 +105,39 @@ def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T 
   let tacticList := loop2 (Ctx.iter g.hyp) tacticList
 
   tacticList
+
+partial def dfs
+  (maxDepth: Nat)
+  (state: α × List β)
+  (neighbourFunc: α → List β)
+  (transFunc: α → β → α)
+  (goalState: α → Bool)
+: Option (List β) :=
+  if maxDepth == 0 then none else
+
+  let (s, pastActions) := state
+  if goalState s then some pastActions else
+
+
+  let rec loop (candidateActions: List β): Option (List β) :=
+    match candidateActions with
+      | [] => none
+      | nextAction :: rest =>
+        match dfs
+          (maxDepth - 1)
+          (transFunc s nextAction, nextAction :: pastActions)
+          neighbourFunc
+          transFunc
+          goalState
+          with
+          | none =>
+            -- try other branches
+            loop rest
+          | some actions => actions
+
+  loop (neighbourFunc s)
+
+
 
 
 end PropLogicKernel.Auto
