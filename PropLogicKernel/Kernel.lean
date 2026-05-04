@@ -31,7 +31,7 @@ inductive T where
   | apply (n: Nat): T
   -- if goal is B and h: A1 → B1
   -- split into two goals A1 and (B1 → B)
-  | bridge (n: Nat): T
+  | compose (n: Nat): T
   -- if goal is A ∧ B
   -- split into two goals A and B
   | constructor: T
@@ -57,7 +57,7 @@ inductive T where
   | lem (p: P): T
 
   -- AUTOMATION
-  -- combine exact, apply, bridge, and ex falso quodlibet
+  -- combine exact, apply, compose, and ex falso quodlibet
   | refine (n: Nat): T
 
   -- APPLICATION LEVEL
@@ -86,7 +86,7 @@ partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Opti
       match t with
         | .exact n => some n
         | .apply n => some n
-        | .bridge n => some n
+        | .compose n => some n
         | .refine n => some n
         | .cases n => some n
         | _ => none
@@ -124,7 +124,7 @@ partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Opti
 
     -- if goal is B and h: A1 → B1
     -- split into two goals A1 and (B1 → B)
-    | (B, .bridge _, some (.imp A1 B1)) =>
+    | (B, .compose _, some (.imp A1 B1)) =>
       some (vc, [
         {g with goal := A1},
         {g with goal := .imp B1 B},
@@ -185,7 +185,7 @@ partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Opti
       ])
 
     -- AUTOMATION
-    -- combine bridge, apply, exact, and ex falso quodlibet
+    -- combine compose, apply, exact, and ex falso quodlibet
     | (B, .refine _, some C1) =>
       if C1 == .fals then
         some (vc, []) -- ex falso quodlibet
@@ -200,7 +200,7 @@ partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Opti
                 {g with goal := A1},
               ])
             else
-              -- bridge
+              -- compose
               some (vc, [
                 {g with goal := A1},
                 {g with goal := .imp B1 B},

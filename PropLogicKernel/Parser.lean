@@ -162,7 +162,7 @@ def parseTactic? (s: String): Option T :=
   <|>
   parsePrefixAndThen "apply " (λ ss => (String.toNat? ss).map T.apply) s
   <|>
-  parsePrefixAndThen "bridge " (λ ss => (String.toNat? ss).map T.bridge) s
+  parsePrefixAndThen "compose " (λ ss => (String.toNat? ss).map T.compose) s
   <|>
   parsePrefixAndThen "refine " (λ ss => (String.toNat? ss).map T.refine) s
   <|>
@@ -177,7 +177,7 @@ def parseTactic? (s: String): Option T :=
 #eval parseTactic? "intro"
 #eval parseTactic? "constructor"
 #eval parseTactic? "apply 0"
-#eval parseTactic? "bridge 1"
+#eval parseTactic? "compose 1"
 #eval parseTactic? "refine 2"
 #eval parseTactic? "cases 3"
 #eval parseTactic? "lem A ∨ B"
