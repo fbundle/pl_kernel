@@ -115,7 +115,7 @@ partial def dfs
 
   let rec loop (actions: List β): Option α :=
     match actions with
-      | [] => failure
+      | [] => none
       | action :: rest =>
         match transitionFunc state action with
           | none => loop rest -- try other branches
@@ -127,7 +127,7 @@ partial def dfs
               nextState
             with
               | none => loop rest -- try other branches
-              | some goal => return goal
+              | some goal => goal
 
   loop (neighbourFunc state)
 
