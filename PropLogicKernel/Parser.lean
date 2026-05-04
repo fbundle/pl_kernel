@@ -158,6 +158,8 @@ def parseTactic? (s: String): Option T :=
   <|>
   parsePrefixAndThen "sorry" (λ _ => some T.sorr) s
   <|>
+  parsePrefixAndThen "exact " (λ ss => (String.toNat? ss).map T.exact) s
+  <|>
   parsePrefixAndThen "apply " (λ ss => (String.toNat? ss).map T.apply) s
   <|>
   parsePrefixAndThen "bridge " (λ ss => (String.toNat? ss).map T.bridge) s
