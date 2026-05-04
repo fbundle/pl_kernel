@@ -38,8 +38,7 @@ def getStep (s: State) (message?: Option String := none): REPL.Step State :=
     match s.stack with
       | [] => []
       | g :: _ =>
-        let (goal, hyp) := Printer.toLinesGoal g
-        (goal :: hyp).reverse
+        (Printer.toLinesGoal g).reverse
 
   let status: List String :=
     [s!"new_count {s.newCount} sorry_count {s.sorrCount} var_count {s.varCount} goals_remaining {s.stack.length}"]

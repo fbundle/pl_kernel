@@ -62,17 +62,22 @@ def toStringTactic (t: T): String :=
 instance: ToString T where
   toString := toStringTactic
 
-def toLinesGoal [Map α Nat P] (g: G α): String × List String :=
-  let hyp := (Map.iter g.hyp).map ((λ ((n, p): Nat × P) =>
-    s!"{n}: {p}"
-  ): (Nat × P) → String)
-  let goal := s!"⊢ {g.goal}"
+def toStringPropInGoal [Map α Nat P] (g: G α): String × List (Nat × String) :=
+  let goal := s!"{g.goal}"
+  let hyp := (Map.iter g.hyp).map (λ (n, p) =>
+    (n, s!"{p}")
+  : Nat × P → Nat × String)
+
   (goal, hyp)
 
+def toLinesGoal [Map α Nat P] (g: G α): List String :=
+  let (goal, hyp) := toStringPropInGoal g
+  let hyp: List String := hyp.map (λ (n, p) => s!"{n}: {p}")
+  let goal := s!"⊢ {goal}"
+  goal :: hyp
+
 def toStringGoal [Map α Nat P] (g: G α): String :=
-  let (goal, hyp) := toLinesGoal g
-  let lines := (goal :: hyp).reverse
-  String.intercalate "\n" lines
+  String.intercalate "\n" (toLinesGoal g).reverse
 
 instance [Map α Nat P]: ToString (G α)  where
   toString := toStringGoal
