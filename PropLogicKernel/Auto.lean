@@ -54,7 +54,7 @@ def getAllAvailTactics [Map α Nat P] (g: G α) : List T :=
         match p with
           | .and _ _ => loop2 rest (t :: tacticList)
           | .or _ _ => loop2 rest (t :: tacticList)
-          | .fals => loop2 rest (t :: tacticList) -- we already refine - this is dup
+          -- | .fals => loop2 rest (t :: tacticList) -- we already refine - this is dup
           | _ => loop2 rest tacticList
 
   let tacticList := loop2 (Map.iter g.hyp) tacticList
