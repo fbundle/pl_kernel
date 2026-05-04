@@ -2,6 +2,7 @@ import PropLogicKernel.Kernel
 
 namespace PropLogicKernel.Auto
 
+
 def getAllAtoms (p: P): List String :=
   let rec loop (nameList: List String) (p: P): List String :=
     match p with
@@ -10,8 +11,10 @@ def getAllAtoms (p: P): List String :=
       | .or this that => loop (loop nameList this) that
       | .imp this that => loop (loop nameList this) that
       | _ => nameList
-
   loop [] p
+
+def addLEMs [Map g Nat P] (g: G α) : G α :=
+  sorry
 
 
 

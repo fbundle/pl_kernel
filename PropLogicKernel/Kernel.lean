@@ -1,8 +1,10 @@
-import PropLogicKernel.ListMap
-
 namespace PropLogicKernel
 
-open PropLogicKernel.ListMap
+class Map (ζ: Type u) (α: Type v) (β: Type w) [BEq α] where
+  empty : ζ
+  get? (z: ζ) (key: α): Option β
+  set (z: ζ) (key: α) (val: β): ζ
+  iter (z: ζ): List (α × β)
 
 /--
 basic data structures

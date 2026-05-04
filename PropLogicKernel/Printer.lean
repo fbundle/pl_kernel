@@ -2,8 +2,6 @@ import PropLogicKernel.Kernel
 
 namespace PropLogicKernel.Printer
 
-open PropLogicKernel.ListMap
-
 
 def toStringProp (p: P) (parent: Option P := none) (strict: Bool := False): String :=
   let precedence (p: Option P): Nat :=

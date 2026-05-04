@@ -1,4 +1,3 @@
-import PropLogicKernel.ListMap
 import PropLogicKernel.Kernel
 import PropLogicKernel.Parser
 import PropLogicKernel.Printer
@@ -8,7 +7,30 @@ import REPL.REPL
 namespace PropLogicKernel.REPL
 
 open PropLogicKernel
-open PropLogicKernel.ListMap
+
+def ListMap α β [BEq α] := List (α × β)
+
+def get? [BEq α] (map: ListMap α β) (key: α): Option β :=
+  match map with
+    | [] => none
+    | (k, v) :: xs =>
+      if k == key then
+        some v
+      else
+        get? xs key
+
+def set [BEq α] (map: ListMap α β) (key: α) (val: β): ListMap α β :=
+  (key, val) :: map
+
+def iter [BEq α] (map: ListMap α β) := map
+
+def empty [BEq α]: ListMap α β := []
+
+instance[BEq α]: Map (ListMap α β) α β  where
+  empty := empty
+  get? := get?
+  set := set
+  iter := iter
 
 abbrev State := S (ListMap Nat P)
 
