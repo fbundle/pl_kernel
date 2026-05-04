@@ -21,7 +21,7 @@ inductive P where
   | and (this: P) (that: P): P
   | or (this: P) (that: P): P
   | imp (this: P) (that: P): P
-  deriving BEq
+  deriving BEq, Ord
 
 -- tactic
 inductive T where

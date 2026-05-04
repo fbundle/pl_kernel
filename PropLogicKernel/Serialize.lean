@@ -1,8 +1,10 @@
 
 import PropLogicKernel.Kernel
-import PropLogicKernel.Printer
+import PropLogicKernel.ListMap
 
 namespace PropLogicKernel.Serialize
+
+open PropLogicKernel.ListMap
 
 def eraseAdjacentDups [BEq α] (l: List α): List α :=
   match l with
@@ -14,16 +16,19 @@ def eraseAdjacentDups [BEq α] (l: List α): List α :=
       else
         x1 :: eraseAdjacentDups (x2 :: xs)
 
-
 -- make goal into a string with unique hypotheses
-def serializeGoal [Map α Nat P] (g: G α): String :=
-  let (goal, hyp) := Printer.toStringPropInGoal g
-  let hyp: List String := (hyp.map (λ (_, p) => p))
-  let hyp := eraseAdjacentDups (hyp.mergeSort)
+def canonicalizeGoal [Map α Nat P] (g: G α): G (ListMap Nat P) :=
+  let hypList: List P := (Map.iter g.hyp).map (λ (_, p) => p: Nat × P → P)
+  let hypList := hypList.mergeSort (λ a b => (compare a b).isLE)
+  let hypList := eraseAdjacentDups hypList
 
-  let pList: List String := goal :: hyp
+  let hypList: List (Nat × P) := List.zip (List.range hypList.length) hypList
 
-  String.intercalate "\n" pList
+  {
+    hyp := hypList,
+    goal := g.goal,
+  }
+
 
 
 
