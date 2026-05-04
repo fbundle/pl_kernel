@@ -69,15 +69,21 @@ def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step 
       | [] => getStep state "no goal to hint"
       | g :: _ =>
         let ts := Auto.getAllAvailTactics g (checkAhead := True)
-        getStep state s!"hint: [{toStringTs ts}]"
-
+        getStep state s!"hint: {toStringTs ts}"
   else
-    match Parser.parseTactic? inputLine with
-      | none => getStep state "parse error"
-      | some tactic =>
-          match tactic.resolveState? classical_logic state with
-            | none => getStep state "resolve error"
-            | some newState => getStep newState
+    match Parser.parsePrefixAndThen "auto " String.toNat? inputLine with
+      | some depth =>
+        match Auto.autoResolve? depth state with
+          | some path =>
+            getStep state s!"solved: {toStringTs path.reverse}"
+          | none => getStep state s!"unsolvable with depth {depth}"
+      | _ =>
+        match Parser.parseTactic? inputLine with
+          | none => getStep state "parse error"
+          | some tactic =>
+              match tactic.resolveState? classical_logic state with
+                | none => getStep state "resolve error"
+                | some newState => getStep newState
 
 
 end PropLogicKernel.REPL
