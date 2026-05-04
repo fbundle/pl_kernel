@@ -14,12 +14,19 @@ open PropLogicKernel.ListMap
 
 abbrev State := S (ListMap Nat P)
 
+def MAX_HIST_SIZE: Nat := 20
+
 structure Hist where
   head: State
   tail: List State
 
 def Hist.push (h: Hist) (s: State): Hist :=
-  {head := s, tail := h.head :: h.tail}
+  let tail := if h.tail.length >= MAX_HIST_SIZE then
+    h.tail.dropLast
+  else
+    h.tail
+
+  {head := s, tail := h.head :: tail}
 
 def Hist.pop (h: Hist): Hist :=
   match h.tail with
