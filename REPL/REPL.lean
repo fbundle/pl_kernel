@@ -7,6 +7,14 @@ structure Step α where
   err: List String
   out: List String
 
+def Step.map (s: Step α) (f: α → β): Step β :=
+  {
+    state := f s.state,
+    code := s.code,
+    err := s.err,
+    out := s.out,
+  }
+
 abbrev Transition α := α → String → Step α
 
 partial def run (trans: Transition α) (prev: Step α)
