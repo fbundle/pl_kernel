@@ -56,17 +56,6 @@ inductive T where
   -- add hyp ¬ A ∨ A
   | lem (p: P): T
 
-  -- AUTOMATION
-  -- combine exact, apply, compose, and ex falso quodlibet
-  | refine (n: Nat): T
-
-  -- APPLICATION LEVEL
-  -- sorry - just sorry
-  | sorr: T
-  -- add a goal into the current state
-  | new (p: P): T
-
-
 class Ctx (α: Type u) where
   empty : α
   get? (ctx: α) (n: Nat): Option P
@@ -87,7 +76,6 @@ partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Opti
         | .exact n => some n
         | .apply n => some n
         | .compose n => some n
-        | .refine n => some n
         | .cases n => some n
         | _ => none
     match n? with
@@ -184,29 +172,6 @@ partial def T.resolveGoal? [Ctx α] (t: T) (vc: Nat) (cl : Bool) (g: G α): Opti
         {g with hyp := Ctx.set g.hyp vc (P.or (.imp A .fals) A)},
       ])
 
-    -- AUTOMATION
-    -- combine compose, apply, exact, and ex falso quodlibet
-    | (B, .refine _, some C1) =>
-      if C1 == .fals then
-        some (vc, []) -- ex falso quodlibet
-      else if B == C1 then
-        some (vc, []) -- exact
-      else
-        match C1 with
-          | .imp A1 B1 =>
-            if B1 == .fals ∨ B == B1 then
-              -- both Modus Ponens (B == B1) and Modus Tollens / Ex Falso (B1 == .fals)
-              some (vc, [
-                {g with goal := A1},
-              ])
-            else
-              -- compose
-              some (vc, [
-                {g with goal := A1},
-                {g with goal := .imp B1 B},
-              ])
-          | _ => none
-
     | _ => none
 
 -- state
@@ -217,23 +182,9 @@ structure S (α: Type) [Ctx α] where
   stack: List (G α)
 
 def T.resolveState? [Ctx α] (t: T) (cl: Bool) (s: S α): Option (S α) :=
-  match (t, s.stack) with
-    -- add a goal into the current state
-    | (.new C, _) => some
-      {s with
-        newCount := s.newCount+1,
-        stack := {hyp := (Ctx.empty: α), goal := C} :: s.stack,
-      }
-
-    -- sorry
-    | (.sorr, _ :: gs) => some
-      {s with
-        sorrCount := s.sorrCount + 1,
-        stack := gs,
-      }
-
-    -- other tactics act on goal at the top
-    | (_, g :: gs) =>
+  match (s.stack) with
+    | [] => none
+    | g :: gs =>
       match t.resolveGoal? s.varCount cl g with
         | none => none
         | some (vc, ga) => some
@@ -241,7 +192,5 @@ def T.resolveState? [Ctx α] (t: T) (cl: Bool) (s: S α): Option (S α) :=
             varCount := vc,
             stack := ga ++ gs,
           }
-
-    | _ => none
 
 end PropLogicKernel

@@ -52,53 +52,44 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
 def equalGoals [Ctx α] (g1: G α) (g2: G α): Bool :=
   (canonicalizeGoal g1) == (canonicalizeGoal g2)
 
-def cartesian (xs : List α) (ys : List β) : List (α × β) :=
-  let rec loop (prod: List (α × β)) (xs: List α): List (α × β) :=
-    match xs with
-      | [] => prod
-      | x :: rest =>
-        loop ((ys.map (λ y => (x, y))) ++ prod) rest
+def cartesian (xs : List α) (ys : List β) (prod: Array (α × β) := #[]) : List (α × β) :=
+  match xs with
+    | [] => prod.toList
+    | x :: rest =>
+      cartesian rest ys (prod := prod ++ ys.map (λ y => (x, y)))
 
-  loop [] xs
 
-#eval cartesian [1, 2, 3] [4, 5, 6]
+#eval cartesian [1, 2, 3] ["a", "b", "c"]
 
-def getAllAvailTactics [Ctx α] (g: G α)
-  (checkAhead: Bool := True)
-: List T :=
-  let tacticList: List T := []
+def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
+  -- tactic without params
+  let tList: Array T := #[T.intro, T.constructor, T.left, T.right]
 
   -- tactic with params
   let nList: List Nat := (Ctx.iter g.hyp).map (λ (n, _) => n)
-  let methodList: List (Nat → T) := [T.refine, T.cases]
-  let tList: List T := (cartesian methodList nList).map (λ (method, n) => method n)
+  let mList: List (Nat → T) := [T.cases, T.exact, T.apply, T.compose]
+  let tList: Array T := tList ++ (cartesian mList nList).map (λ (method, n) => method n)
 
-  let tacticList := if ¬ checkAhead then
-    tList ++ tacticList
-  else
-    let rec loop (tacticList: List T) (tList: List T): List T :=
+
+  let tList: List T := tList.toList
+
+  let rec loop (tList: List T) (tListAcc: Array T): List T :=
       match tList with
-        | [] => tacticList
+        | [] => tListAcc.toList
         | t :: rest =>
           match t.resolveGoal? 0 false g with
-            | none => loop tacticList rest -- cannot resolve, loop
+            | none => loop rest tListAcc -- cannot resolve, loop
             | some (_, g2 :: []) =>
               if equalGoals g2 g then -- prevent one step loop
-                loop tacticList rest
+                loop rest tListAcc
               else
-                loop (t :: tacticList) rest -- resolve ok
-            | _ => loop (t :: tacticList) rest -- resolve ok
+                loop rest (tListAcc.push t)  -- resolve ok
+            | _ => loop rest (tListAcc.push t)  -- resolve ok
 
-    loop tacticList tList
-
-  -- tactic without params
-  let tacticList := match g.goal with
-    | (.imp _ _) => T.intro :: tacticList
-    | (.and _ _) => T.constructor :: tacticList
-    | (.or _ _) => T.left :: T.right :: tacticList
-    | _ => tacticList
-
-  tacticList
+  if ¬ checkAhead then
+    tList
+  else
+    loop tList #[]
 
 partial def dfs
   (goalState: α → Bool)

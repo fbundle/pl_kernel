@@ -49,15 +49,11 @@ def toStringTactic (t: T): String :=
     | .exact h => s!"exact {h}"
     | .apply h => s!"apply {h}"
     | .compose h => s!"compose {h}"
-    | .refine h => s!"refine {h}"
     | .constructor => "constructor"
     | .left => "left"
     | .right => "right"
     | .cases h => s!"cases {h}"
     | .lem p => s!"lem {p}"
-
-    | .sorr => "sorry"
-    | .new p => s!"new {p}"
 
 instance: ToString T where
   toString := toStringTactic

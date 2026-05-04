@@ -156,21 +156,15 @@ def parseTactic? (s: String): Option T :=
   <|>
   parsePrefixAndThen "right" (λ _ => some T.right) s
   <|>
-  parsePrefixAndThen "sorry" (λ _ => some T.sorr) s
-  <|>
   parsePrefixAndThen "exact " (λ ss => (String.toNat? ss).map T.exact) s
   <|>
   parsePrefixAndThen "apply " (λ ss => (String.toNat? ss).map T.apply) s
   <|>
   parsePrefixAndThen "compose " (λ ss => (String.toNat? ss).map T.compose) s
   <|>
-  parsePrefixAndThen "refine " (λ ss => (String.toNat? ss).map T.refine) s
-  <|>
   parsePrefixAndThen "cases " (λ ss => (String.toNat? ss).map T.cases) s
   <|>
   parsePrefixAndThen "lem " (λ ss => (parseProp? ss).map T.lem) s
-  <|>
-  parsePrefixAndThen "new " (λ ss => (parseProp? ss).map T.new) s
 
 
 
