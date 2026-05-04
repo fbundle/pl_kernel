@@ -139,44 +139,38 @@ def parseProp: ParsePropFunc := λ xs => parseImp (xs.filter (λ x => ¬ x.isWhi
 #eval parseProp "¬¬P → P".toList
 
 
-def ParseTacticFunc := ParseFunc T
+def parseProp? (s: String): Option P := do
+  let (p, _) ← parseProp s.toList
+  return p
 
-def parseExactString (s: String): ParseFunc String :=
-  let sList := s.toList
-  λ (xs: List Char) =>
-    if xs.take sList.length == sList then
-      some (s, xs.drop sList.length)
-    else
-      none
-
-
-
-
+def parsePrefixAndThen (pre: String) (th: String → Option α) (s: String) : Option α :=
+  if ¬ s.startsWith pre then none else
+  let s := (s.drop pre.length).toString
+  th s
 
 def parseTactic? (s: String): Option T :=
   let s := s.trimAscii.toString
-  match s with
-  | "intro" => some T.intro
-  | "constructor" => some T.constructor
-  | "left" => some T.left
-  | "right" => some T.right
-  | "sorry" => some T.sorr
-  | _ =>
-    if s.startsWith "apply " then
-      (s.drop 6).toString |> String.toNat? |>.map T.apply
-    else if s.startsWith "exact " then
-      (s.drop 6).toString |> String.toNat? |>.map T.exact
-    else if s.startsWith "cases " then
-      (s.drop 6).toString |> String.toNat? |>.map T.cases
-    else if s.startsWith "lem " then
-      parseProp? ((s.drop 4).toString) |>.map T.lem
-    else if s.startsWith "refine " then
-      (s.drop 7).toString |> String.toNat? |>.map T.refine
-    else if s.startsWith "bridge " then
-      (s.drop 7).toString |> String.toNat? |>.map T.bridge
-    else if s.startsWith "new " then
-      parseProp? ((s.drop 4).toString) |>.map T.new
-    else
-      none
+  parsePrefixAndThen "intro" (λ _ => some T.intro) s
+  <|>
+  parsePrefixAndThen "constructor" (λ _ => some T.constructor) s
+  <|>
+  parsePrefixAndThen "left" (λ _ => some T.left) s
+  <|>
+  parsePrefixAndThen "right" (λ _ => some T.right) s
+  <|>
+  parsePrefixAndThen "sorry" (λ _ => some T.sorr) s
+  <|>
+  parsePrefixAndThen "apply " (λ ss => (String.toNat? ss).map T.apply) s
+  <|>
+  parsePrefixAndThen "bridge " (λ ss => (String.toNat? ss).map T.bridge) s
+  <|>
+  parsePrefixAndThen "refine " (λ ss => (String.toNat? ss).map T.refine) s
+  <|>
+  parsePrefixAndThen "cases " (λ ss => (String.toNat? ss).map T.cases) s
+  <|>
+  parsePrefixAndThen "lem " (λ ss => (parseProp? ss).map T.lem) s
+  <|>
+  parsePrefixAndThen "new " (λ ss => (parseProp? ss).map T.new) s
+
 
 end PropLogicKernel.Parser
