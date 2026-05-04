@@ -49,8 +49,8 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
     goal := g.goal,
   }
 
--- we only set skipOneCycle = True when doing DFS large problems but shallow depth
-def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T :=
+-- we don't checkAhead for DFS
+def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
 
   let tacticList: List T := []
   let tacticList := match g.goal with
@@ -61,30 +61,28 @@ def getAllAvailTactics [Ctx α] (g: G α) (skipOneCycle: Bool := False): List T 
 
   -- refine
   let g1: Option CanonicalGoal :=
-    if skipOneCycle then none else canonicalizeGoal g
+    if checkAhead then canonicalizeGoal g else none
 
   let rec loop1 (hyp: List (Nat × P)) (tacticList: List T): List T :=
     match hyp with
       | [] => tacticList
       | (n, _) :: rest =>
         let t := T.refine n
-        -- try to resolve t
         let newTacticList: List T :=
+          if ¬ checkAhead then (t :: tacticList) else
+          -- try to resolve t
           match t.resolveGoal? 0 False g with -- it doesn't matter what we set for (vc : Nat) (cl : Bool)
             | none =>
               tacticList -- cannot resolve do nothing
             | some (_, g2s) =>
-              if skipOneCycle then
-                (t :: tacticList) -- resolve ok, add t and loop
-              else
-                match g2s with
-                  | g2' :: [] =>
-                    if (canonicalizeGoal g2') == g1 then
-                      tacticList -- prevent 1-step infinite loop
-                    else
-                      (t :: tacticList) -- resolve ok, add t and loop
-                  | _ =>
+              match g2s with
+                | g2' :: [] =>
+                  if (canonicalizeGoal g2') == g1 then
+                    tacticList -- prevent 1-step infinite loop
+                  else
                     (t :: tacticList) -- resolve ok, add t and loop
+                | _ =>
+                  (t :: tacticList) -- resolve ok, add t and loop
 
         loop1 rest newTacticList
 
@@ -135,6 +133,9 @@ partial def dfs
   loop (neighbourFunc state)
 
 def autoResolve? [Ctx α] (maxDepth: Nat) (s: S α): Option (List T) :=
+  let gs := dfs (α := S α × List T) (β := T)
+    (goalState := λ ((s, ts): S α × List T) => s.stack.length == 0)
+    (transitionFunc := )
   sorry
 
 
