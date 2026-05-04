@@ -77,7 +77,7 @@ def trans (state: State) (inputLine: String) (cl: Bool := true): REPL.Step State
   else
     match Parser.parsePrefixAndThen "auto " String.toNat? inputLine with
       | some depth =>
-        match Auto.autoResolve? depth state with
+        match Auto.autoSolveWithMaxDepth? depth state with
           | some path =>
             getStep state s!"solved: {toStringTs path.reverse}"
           | none => getStep state s!"unsolvable with depth {depth}"
