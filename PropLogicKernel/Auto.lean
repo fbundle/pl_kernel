@@ -3,19 +3,25 @@ import PropLogicKernel.Kernel
 namespace PropLogicKernel.Auto
 
 
-def getAllAtoms (p: P): List String :=
-  let rec loop (nameList: List String) (p: P): List String :=
-    match p with
-      | .var name => nameList.insert name -- insert without duplicate
-      | .and this that => loop (loop nameList this) that
-      | .or this that => loop (loop nameList this) that
-      | .imp this that => loop (loop nameList this) that
-      | _ => nameList
-  loop [] p
+def getAllAtomsOfProp (p: P) (nameSet: List String): List String :=
+  match p with
+    | .var name => nameSet.insert name -- insert without duplicate
+    | .and this that => getAllAtomsOfProp this (getAllAtomsOfProp that nameSet)
+    | .or this that => getAllAtomsOfProp this (getAllAtomsOfProp that nameSet)
+    | .imp this that => getAllAtomsOfProp this (getAllAtomsOfProp that nameSet)
+    | _ => nameSet
 
-def addLEMs [Map g Nat P] (g: G α) : G α :=
-  sorry
+def getAllAtomsOfGoal [Map α Nat P] (g: G α) : List String :=
+  let nameSet := getAllAtomsOfProp g.goal []
+  let rec getAllAtomsOfHyp (hyp: List (Nat × P)) (nameSet: List String): List String :=
+    match hyp with
+      | [] => nameSet
+      | (_, p) :: hyp =>
+        let nameSet := getAllAtomsOfProp p nameSet
+        getAllAtomsOfHyp hyp nameSet
 
+  let nameSet := getAllAtomsOfHyp (Map.iter g.hyp) nameSet
+  nameSet
 
 
 
