@@ -111,7 +111,7 @@ def resolveTacticToGoal? [Map α Nat P] (varCount: Nat) (g: G α) (t: T) (cl : B
     -- CLASSICAL LOGIC
 
     -- law of excluded middle
-    -- add (A → False) ∨ A
+    -- add ¬ A ∨ A
     | (_, .lem A, _) =>
       if cl then
         Except.ok (varCount + 1, [{
