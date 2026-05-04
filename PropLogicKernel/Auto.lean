@@ -64,15 +64,16 @@ def cartesian (xs : List α) (ys : List β) (prod: Array (α × β) := #[]) : Li
 
 def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool): List T :=
   -- tactic without params
-  let tList: Array T := #[T.intro, T.constructor, T.left, T.right]
+  let tArray: Array T := #[T.intro, T.constructor, T.left, T.right]
 
   -- tactic with params
   let nList: List Nat := (Ctx.iter g.hyp).map (λ (n, _) => n)
   let mList: List (Nat → T) := [T.cases, T.exact, T.apply, T.compose]
-  let tList: Array T := tList ++ (cartesian mList nList).map (λ (method, n) => method n)
+  let tArray: Array T := tArray ++ (cartesian mList nList).map (λ (method, n) => method n)
 
-  let tList: List T := tList.toList
+  let tList: List T := tArray.toList
 
+  if ¬ checkAhead then tList else
   let rec loop (tList: List T) (tListAcc: Array T): List T :=
       match tList with
         | [] => tListAcc.toList
@@ -86,10 +87,9 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool): List T :=
                 loop rest (tListAcc.push t)  -- resolve ok
             | _ => loop rest (tListAcc.push t)  -- resolve ok
 
-  if ¬ checkAhead then
-    tList
-  else
-    loop tList #[]
+
+  let tList: List T := loop tList #[]
+  tList
 
 partial def dfs
   (goalState: α → Bool)
