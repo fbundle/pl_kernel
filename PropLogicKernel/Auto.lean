@@ -61,9 +61,6 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
   -- refine
   let method: Nat → T := T.refine
 
-  let g1: Option CanonicalGoal :=
-    if checkAhead then canonicalizeGoal g else none
-
   let rec loop1 (hyp: List (Nat × P)) (tacticList: List T): List T :=
     match hyp with
       | [] => tacticList
@@ -77,8 +74,8 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
               tacticList -- cannot resolve do nothing
             | some (_, g2s) =>
               match g2s with
-                | g2' :: [] =>
-                  if (canonicalizeGoal g2') == g1 then -- BEq Option T and T, should be fine
+                | g2 :: [] =>
+                  if (canonicalizeGoal g2) == (canonicalizeGoal g) then
                     tacticList -- prevent 1-step infinite loop
                   else
                     (t :: tacticList) -- resolve ok, add t and loop
