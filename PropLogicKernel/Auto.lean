@@ -49,7 +49,6 @@ def canonicalizeGoal [Ctx α] (g: G α): CanonicalGoal :=
     goal := g.goal,
   }
 
--- we don't checkAhead for search, let the search handle it
 def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
   let tacticList: List T := []
   let tacticList := match g.goal with
