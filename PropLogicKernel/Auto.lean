@@ -65,13 +65,12 @@ def cartesian (xs : List α) (ys : List β) : List (α × β) :=
 
 def getAllAvailTactics [Ctx α] (g: G α)
   (checkAhead: Bool := True)
-  (methodList: List (Nat → T) := [T.cases, T.refine])
 : List T :=
   let tacticList: List T := []
 
   -- tactic with params
   let nList: List Nat := (Ctx.iter g.hyp).map (λ (n, _) => n)
-  -- let methodList: List (Nat → T) := [T.refine, T.cases]
+  let methodList: List (Nat → T) := [T.refine, T.cases]
   let tList: List T := (cartesian methodList nList).map (λ (method, n) => method n)
 
   let tacticList := if ¬ checkAhead then
