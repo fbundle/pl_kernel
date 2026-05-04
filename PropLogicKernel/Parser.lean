@@ -46,7 +46,7 @@ partial def ParseFunc.repeat (p: ParseFunc α) (xs: List Char): Option (List α 
     match p xs with
       | none => some (ys.toList, xs)
       | some (y, xs1) =>
-        assert! xs1.length < xs.length
+        assert! xs1.length < xs.length -- parser in repeat must consume input
         loop (ys.push y) xs1
   loop #[] xs
 
@@ -71,7 +71,7 @@ def ParsePropFunc := ParseFunc P
 def parseNonEmptyString (chList: List Char) (xs: List Char): Option (String × List Char) := do
   let pList: List (ParseFunc Char) := chList.map parseExact
   -- p1: parse any characters in chList
-  let p1: ParseFunc Char := pList.foldl ParseFunc.orElse parseFail
+  let p1: ParseFunc Char := pList.foldr ParseFunc.orElse parseFail
   -- p2:
   let p2: ParseFunc (List Char) := p1.repeat
   let p3: ParseFunc String := p2.map String.ofList
@@ -129,16 +129,33 @@ partial def parseImp: ParsePropFunc := makeRightAssocParseFunc parseOr '→' (ma
 
 end
 
-def parseProp? (input: String): Option P := do
-  let chList := input.toList.filter (λ x => ¬ x.isWhitespace)
-  let (p, _) ← parseImp chList
-  return p
 
-#eval parseProp? "A → ⊥"
-#eval parseProp? "A ∧ B → B ∧ A"
-#eval parseProp? "(A → B) ∧ ¬ B → ¬ A"
-#eval parseProp? "A → (A → B) → (A → C) → (B ∨ C → D) → D"
-#eval parseProp? "¬¬P → P"
+def parseProp: ParsePropFunc := λ xs => parseImp (xs.filter (λ x => ¬ x.isWhitespace))
+
+#eval parseProp "A → ⊥".toList
+#eval parseProp "A ∧ B → B ∧ A".toList
+#eval parseProp "(A → B) ∧ ¬ B → ¬ A".toList
+#eval parseProp "A → (A → B) → (A → C) → (B ∨ C → D) → D".toList
+#eval parseProp "¬¬P → P".toList
+
+
+def ParseTacticFunc := ParseFunc T
+
+def parseExactString (s: String): ParseFunc String :=
+    let chList := s.toList
+    let pList: List (ParseFunc Char) := chList.map parseExact
+
+    match pList.getLast? with
+      | none => -- s is empty - just fail - because we don't allow any parser that consume nothing
+        parseFail
+      | some pLast =>
+        let p: ParseFunc (List Char) := (pList.dropLast).foldr (λ p1 p2 =>
+          (p1.concat p2).map (λ (v1, v2List) => v1 :: v2List)
+        ) (pLast.map (λ ch => [ch]))
+
+        let p: ParseFunc String := p.map (λ chList => String.ofList chList)
+        p
+
 
 def parseTactic? (s: String): Option T :=
   let s := s.trimAscii.toString
@@ -159,6 +176,8 @@ def parseTactic? (s: String): Option T :=
       parseProp? ((s.drop 4).toString) |>.map T.lem
     else if s.startsWith "refine " then
       (s.drop 7).toString |> String.toNat? |>.map T.refine
+    else if s.startsWith "bridge " then
+      (s.drop 7).toString |> String.toNat? |>.map T.bridge
     else if s.startsWith "new " then
       parseProp? ((s.drop 4).toString) |>.map T.new
     else
