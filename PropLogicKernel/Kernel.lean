@@ -69,7 +69,6 @@ inductive T where
 
 class Ctx (α: Type u) where
   empty : α
-  length (ctx: α): Nat
   get? (ctx: α) (n: Nat): Option P
   set (ctx: α) (n: Nat) (p: P): α
   iter (ctx: α): List (Nat × P)

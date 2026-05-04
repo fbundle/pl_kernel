@@ -19,7 +19,6 @@ partial def ListMap.get? [BEq α] (map: ListMap α β) (key: α): Option β :=
 
 instance: Ctx (ListMap Nat P) where
   empty := {data := []}
-  length := λ (map: ListMap Nat P) => map.data.length
   set := λ (map: ListMap Nat P) (key: Nat) (val: P) => {data := (key, val) :: map.data}
   iter := λ (map: ListMap Nat P) => map.data
   get? := ListMap.get?
