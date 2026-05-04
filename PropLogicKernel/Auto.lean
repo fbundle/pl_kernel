@@ -78,7 +78,7 @@ def getAllAvailTactics [Ctx α] (g: G α) (checkAhead: Bool := True): List T :=
             | some (_, g2s) =>
               match g2s with
                 | g2' :: [] =>
-                  if (canonicalizeGoal g2') == g1 then
+                  if (canonicalizeGoal g2') == g1 then -- BEq Option T and T, should be fine
                     tacticList -- prevent 1-step infinite loop
                   else
                     (t :: tacticList) -- resolve ok, add t and loop
