@@ -133,7 +133,8 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
         match C1 with
           | .imp A1 B1 =>
             if B1 == .fals ∨ B == B1 then
-              -- apply (with B1 == ⊥)
+              -- both Modus Ponens (B == B1) and Modus Tollens / Ex Falso (B1 == .fals)
+
               some (vc, [
                 {g with goal := A1},
               ])
