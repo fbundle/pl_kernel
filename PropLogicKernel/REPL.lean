@@ -33,8 +33,14 @@ def getStep (s: State) (message?: Option String := none) (hint: Bool := true): R
       | g :: _ =>
         (Printer.toLinesGoal g).reverse
 
+  let status: List String := []
+
+  let status: List String := if s.newCount == 0 then
+    status ++ ["type `new <prop>` input a new goal and `auto <depth>` for auto search"]
+  else
+    status
   let status: List String :=
-    [s!"new_count {s.newCount} sorry_count {s.sorrCount} var_count {s.varCount} goals_remaining {s.stack.length}"]
+    status ++ [s!"new_count {s.newCount} sorry_count {s.sorrCount} var_count {s.varCount} goals_remaining {s.stack.length}"]
 
   let status: List String :=
     if isAllGoalsAccomplished s then
