@@ -35,8 +35,6 @@ inductive T where
   -- if goal is B and h: A1 → B1
   -- split into two goals A1 and (B1 → B)
   | bridge (n: Nat): T
-  -- combine exact, apply, bridge, and ex falso quodlibet
-  | refine (n: Nat): T
   -- if goal is A ∧ B
   -- split into two goals A and B
   | constructor: T
@@ -60,6 +58,10 @@ inductive T where
   -- law of excluded middle
   -- add hyp ¬ A ∨ A
   | lem (p: P): T
+
+  -- AUTOMATION
+  -- combine exact, apply, bridge, and ex falso quodlibet
+  | refine (n: Nat): T
 
   -- APPLICATION LEVEL
   -- sorry - just sorry
@@ -123,28 +125,6 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
         {g with goal := .imp B1 B},
       ])
 
-    -- combine bridge, apply, exact, and ex falso quodlibet
-    | (B, .refine _, some C1) =>
-      if C1 == .fals then
-        some (vc, []) -- ex falso quodlibet
-      else if B == C1 then
-        some (vc, []) -- exact
-      else
-        match C1 with
-          | .imp A1 B1 =>
-            if B1 == .fals ∨ B == B1 then
-              -- both Modus Ponens (B == B1) and Modus Tollens / Ex Falso (B1 == .fals)
-
-              some (vc, [
-                {g with goal := A1},
-              ])
-            else
-              -- bridge
-              some (vc, [
-                {g with goal := A1},
-                {g with goal := .imp B1 B},
-              ])
-          | _ => none
 
     -- GOAL DECOMPOSITION
 
@@ -198,6 +178,30 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
       some (vc + 1, [
         {g with hyp := Map.set g.hyp vc (P.or (.imp A .fals) A)},
       ])
+
+    -- AUTOMATION
+    -- combine bridge, apply, exact, and ex falso quodlibet
+    | (B, .refine _, some C1) =>
+      if C1 == .fals then
+        some (vc, []) -- ex falso quodlibet
+      else if B == C1 then
+        some (vc, []) -- exact
+      else
+        match C1 with
+          | .imp A1 B1 =>
+            if B1 == .fals ∨ B == B1 then
+              -- both Modus Ponens (B == B1) and Modus Tollens / Ex Falso (B1 == .fals)
+              some (vc, [
+                {g with goal := A1},
+              ])
+            else
+              -- bridge
+              some (vc, [
+                {g with goal := A1},
+                {g with goal := .imp B1 B},
+              ])
+          | _ => none
+
 
     | _ => none
 
