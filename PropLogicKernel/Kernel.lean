@@ -77,10 +77,11 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
   let h?: Option P :=
     let n?: Option Nat :=
       match t with
-        | .apply n => some n
         | .exact n => some n
-        | .cases n => some n
+        | .apply n => some n
+        | .bridge n => some n
         | .refine n => some n
+        | .cases n => some n
         | _ => none
     match n? with
       | none => none
