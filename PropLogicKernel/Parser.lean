@@ -1,5 +1,5 @@
-import PropLogicKernel.Basic
-import PropLogicKernel.Printer
+import PropLogicKernel.Kernel
+import PropLogicKernel.Printer -- for testing
 
 namespace PropLogicKernel.ParserCombinator
 
@@ -65,7 +65,6 @@ end PropLogicKernel.ParserCombinator
 namespace PropLogicKernel.Parser
 
 open PropLogicKernel.ParserCombinator
-open PropLogicKernel.Basic
 
 def ParsePropFunc := ParseFunc P
 

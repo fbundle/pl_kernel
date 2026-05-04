@@ -1,6 +1,6 @@
 import PropLogicKernel.ListMap
 
-namespace PropLogicKernel.Kernel
+namespace PropLogicKernel
 
 open PropLogicKernel.ListMap
 
@@ -222,12 +222,4 @@ def T.resolveState? [Map α Nat P] (t: T) (cl: Bool) (s: S α): Option (S α) :=
     | _ => none
 
 
-
-
-
-
-
-
-
-
-end PropLogicKernel.Kernel
+namespace PropLogicKernel

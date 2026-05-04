@@ -1,20 +1,9 @@
-import PropLogicKernel.Basic
+import PropLogicKernel.Kernel
 
 namespace PropLogicKernel.Printer
 
-open PropLogicKernel.Basic
 open PropLogicKernel.ListMap
 
-/--
-def toStringProp (p: P): String :=
-  match p with
-    | .fals => "⊥"
-    | .var name => name
-    | .and this that => s!"({toStringProp this} ∧ {toStringProp that})"
-    | .or this that => s!"({toStringProp this} ∨ {toStringProp that})"
-    | .imp this that => s!"({toStringProp this} → {toStringProp that})"
-
---/
 
 def toStringProp (p: P) (parent: Option P := none) (strict: Bool := False): String :=
   let precedence (p: Option P): Nat :=
@@ -59,14 +48,16 @@ instance: ToString P where
 def toStringTactic (t: T): String :=
   match t with
     | .intro => "intro"
-    | .apply h => s!"apply {h}"
     | .exact h => s!"exact {h}"
+    | .apply h => s!"apply {h}"
+    | .bridge h => s!"bridge {h}"
+    | .refine h => s!"refine {h}"
     | .constructor => "constructor"
     | .left => "left"
     | .right => "right"
     | .cases h => s!"cases {h}"
     | .lem p => s!"lem {p}"
-    | .refine h => s!"refine {h}"
+
     | .sorr => "sorry"
     | .new p => s!"new {p}"
 
