@@ -1,94 +1,70 @@
-import PropLogicKernel.Basic
 import PropLogicKernel.ListMap
+import PropLogicKernel.Kernel
 import PropLogicKernel.Parser
-import PropLogicKernel.Resolver
 import PropLogicKernel.Printer
 
 import REPL.REPL
 
 namespace PropLogicKernel.REPL
 
-open PropLogicKernel.Basic
+open PropLogicKernel
 open PropLogicKernel.ListMap
-open PropLogicKernel.Parser
-open PropLogicKernel.Resolver
-open PropLogicKernel.Printer
 
 abbrev State := S (ListMap Nat P)
 
-def isAllGoalsAccomplished (s: State): Bool :=
-  s.stack.isEmpty ∧ (s.sorrCount == 0) ∧ (s.newCount ≥ 1)
+def getStep (s: State) (message?: Option String := none): REPL.Step State :=
+  let isAllGoalsAccomplished (s: State): Bool :=
+    s.stack.isEmpty ∧ (s.sorrCount == 0) ∧ (s.newCount ≥ 1)
 
-def getCode (s: State): UInt32 :=
-  if isAllGoalsAccomplished s then
-    0
-  else
-    1
+  let getCode (s: State): UInt32 :=
+    if isAllGoalsAccomplished s then 0 else 1
 
-def getPrompt (s: State): REPL.Step State :=
-  match s.stack with
-    | [] =>
-      let allGoalsAccomplished: List String :=
-        if isAllGoalsAccomplished s then
-          ["all goals accomplished!"]
-        else
-          []
-      {
-        state := s,
-        code := getCode s,
-        err := [
-          s!"new_count {s.newCount} sorry_count {s.sorrCount} var_count {s.varCount} goals_remaining {s.stack.length}",
-        ] ++ allGoalsAccomplished,
-        out := [],
-      }
-    | g :: _ =>
-      let (goal, hyp) := toLinesGoal g
-      let lines := (goal :: hyp).reverse
-      {
-        state := s,
-        code := getCode s,
-        err := [
-          s!"new_count {s.newCount} sorry_count {s.sorrCount} var_count {s.varCount} goals_remaining {s.stack.length}",
-        ],
-        out := lines,
-      }
+  let out: List String :=
+    match s.stack with
+      | [] => []
+      | g :: _ =>
+        let (goal, hyp) := Printer.toLinesGoal g
+        (goal :: hyp).reverse
+
+  let status: List String :=
+    [s!"new_count {s.newCount} sorry_count {s.sorrCount} var_count {s.varCount} goals_remaining {s.stack.length}"]
+
+  let status: List String :=
+    if ¬ isAllGoalsAccomplished s then status else
+      status ++ ["all goals accomplished!"]
+
+  let status: List String :=
+    match message? with
+      | none => status
+      | some message => message :: status
+
+  {
+    state := s,
+    code := getCode s,
+    err := status,
+    out := out,
+  }
 
 def init: REPL.Step State :=
-  getPrompt {
+  getStep {
     varCount := 0,
     sorrCount := 0,
     newCount := 0,
     stack := []
   }
 
-def trans (classical_logic: Bool) (s: State) (inputLine: String): REPL.Step State :=
+def trans (classical_logic: Bool) (state: State) (inputLine: String): REPL.Step State :=
   let inputLine := inputLine.trimAscii.toString
 
   if inputLine.length == 0 then
-    {
-        state := s,
-        code := getCode s,
-        err := [],
-        out := [],
-    }
+    getStep state
   else
-    match parseTactic? inputLine with
-      | none =>
-        {
-          state := s,
-          code := getCode s,
-          err := ["parse error"],
-          out := [],
-        }
+    match Parser.parseTactic? inputLine with
+      | none => getStep state "parse error"
       | some tactic =>
-        match resolveTactic? s tactic classical_logic with
-          | Except.error msg =>
-            {
-              state := s,
-              code := getCode s,
-              err := [msg],
-              out := [],
-            }
-          | Except.ok newS => getPrompt newS
+          match tactic.resolveState? classical_logic state with
+            | none => getStep state "resolve error"
+            | some newState => getStep newState
+
 
 end PropLogicKernel.REPL
