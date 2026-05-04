@@ -23,6 +23,7 @@ inductive P where
 
 -- tactic
 inductive T where
+  -- PRIMITIVES
   -- if goal is A → B
   -- add hyp h: A and replace goal with B
   | intro: T
@@ -202,7 +203,6 @@ partial def T.resolveGoal? [Map α Nat P] (t: T) (vc: Nat) (cl : Bool) (g: G α)
               ])
           | _ => none
 
-
     | _ => none
 
 -- state
@@ -240,5 +240,4 @@ def T.resolveState? [Map α Nat P] (t: T) (cl: Bool) (s: S α): Option (S α) :=
 
     | _ => none
 
-
-namespace PropLogicKernel
+end PropLogicKernel
