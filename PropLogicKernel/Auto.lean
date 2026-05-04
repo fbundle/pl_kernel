@@ -113,19 +113,21 @@ partial def dfs
   if goalState state then some state else
 
 
-  let rec loop (actions: List β): Option α := do
+  let rec loop (actions: List β): Option α :=
     match actions with
       | [] => failure
       | action :: rest =>
-        let nextState ← transitionFunc state action
-        match dfs
-          goalState
-          transitionFunc
-          neighbourFunc
-          nextState
-        with
+        match transitionFunc state action with
           | none => loop rest -- try other branches
-          | some goal => return goal
+          | some nextState =>
+            match dfs
+              goalState
+              transitionFunc
+              neighbourFunc
+              nextState
+            with
+              | none => loop rest -- try other branches
+              | some goal => return goal
 
   loop (neighbourFunc state)
 
