@@ -1,58 +1,125 @@
-# PropLogicKernel: A Formal Propositional Logic System in Lean 4
+# PropLogicKernel
 
-PropLogicKernel is a formally verified kernel for propositional logic, implemented in **Lean 4**. It provides a foundational infrastructure for goal-directed natural deduction, automated theorem proving, and interactive proof development.
+A small kernel for propositional logic, written in **Lean 4**. It supports goal-directed natural deduction in both intuitionistic and classical logic, with an interactive REPL and tooling for automated puzzle generation and verification.
 
-## Core Calculus and Formal Semantics
+## Overview
 
-The system is built upon a tactic-based natural deduction framework. It supports both intuitionistic and classical propositional logic.
+The kernel models propositional proofs as a **stack of goals**. Each goal is a pair ⟨Γ, φ⟩ where Γ is a context of indexed hypotheses and φ is the target proposition. Tactics define transitions on this stack; a proof is complete when the stack is empty.
 
-### Syntax
-The language of propositions $\mathcal{P}$ is defined inductively:
-- **Bottom ($\bot$)**: The contradiction `fals`.
-- **Variables**: Atomic propositions defined by strings.
-- **Conjunction ($A \wedge B$)**: `and(A, B)`.
-- **Disjunction ($A \vee B$)**: `or(A, B)`.
-- **Implication ($A \to B$)**: `imp(A, B)`.
+### Propositions
 
-### Proof State and Goals
-A **Goal** $G$ is a pair $\langle \Gamma, \phi \rangle$, where $\Gamma$ is a context of hypotheses (a mapping from indices to propositions) and $\phi \in \mathcal{P}$ is the target proposition. The **Proof State** $S$ is a stack of goals $[G_1, G_2, \dots, G_n]$. A theorem is considered formally proven when the stack is empty.
+```
+P ::= ⊥ | <var> | P ∧ P | P ∨ P | P → P
+```
 
-### Tactic Semantics
-Tactics $T$ define state transitions $S \xrightarrow{T} S'$. The kernel implements the following inference rules:
+### Tactics
 
-| Tactic | Logical Rule | Operational Semantics |
-| :--- | :--- | :--- |
-| `intro` | $\to$-Introduction | Introduces hypothesis $A$ from goal $A \to B$. |
-| `exact n` | Hypothesis Application | Resolves goal $\phi$ if $\Gamma[n] = \phi$. |
-| `apply n` | $\to$-Elimination (Backward) | Reduces goal $B$ to $A$ given $\Gamma[n] = A \to B$. |
-| `constructor`| $\wedge$-Introduction | Splits goal $A \wedge B$ into subgoals $A$ and $B$. |
-| `left`/`right` | $\vee$-Introduction | Reduces goal $A \vee B$ to $A$ or $B$. |
-| `cases n` | Elimination Rules | <ul><li>**$\vee$-Elim**: Splits into cases for $A$ and $B$.</li><li>**$\wedge$-Elim**: Extracts $A$ and $B$ from $A \wedge B$.</li><li>**$\bot$-Elim**: Resolves any goal from a contradiction.</li></ul> |
-| `lem p` | Excluded Middle | Introduces $\neg p \vee p$ (Classical Logic). |
+| Tactic | Effect |
+|---|---|
+| `intro` | `⊢ A → B` → introduce `A` as a hypothesis, new goal `⊢ B` |
+| `exact n` | Close goal if hypothesis `n` matches it |
+| `apply n` | `hyp[n] = A → B`, `⊢ B` → new goal `⊢ A` |
+| `constructor` | `⊢ A ∧ B` → two subgoals `⊢ A` and `⊢ B` |
+| `left` / `right` | `⊢ A ∨ B` → choose a side |
+| `cases n` | Split `∨`/`∧` hypothesis, or close goal from `⊥` |
+| `lem P` | Introduce `¬P ∨ P` (classical logic) |
 
-## Automated Theorem Proving
+## Lean Source Layout
 
-The kernel includes an automated solver (`Auto.lean`) based on **Iterative Deepening Depth-First Search (ID-DFS)**. This strategy ensures completeness for the propositional fragment while managing the search space of proof trees. The solver explores all available tactic applications, prioritizing those that resolve goals immediately or reduce complexity.
+```
+PropLogicKernel/
+  Kernel.lean     — core types and tactic semantics
+  Auto.lean       — iterative-deepening proof search
+  Parser.lean     — proposition and tactic parser
+  Printer.lean    — precedence-aware pretty printer
+  Serialize.lean  — serialization helpers
+REPL/
+  REPL.lean       — REPL protocol
+  Command.lean    — command dispatch
+Main.lean         — entry point
+```
 
-## Implementation Details
+## Build
 
-The project is structured into modular Lean 4 components:
-- **`PropLogicKernel/Kernel.lean`**: The core logical kernel defining the inductive types and transition rules.
-- **`PropLogicKernel/Auto.lean`**: The automated search engine and tactic discovery logic.
-- **`PropLogicKernel/Parser.lean`**: A functional parser combinator implementation for serialized propositions and tactics.
-- **`PropLogicKernel/Printer.lean`**: A precedence-aware formatter for human-readable logical expressions.
+Requires [Lean 4 / elan](https://github.com/leanprover/elan). Toolchain version is pinned in `lean-toolchain`.
 
-## Build and Interaction
-
-To build the Lean kernel and REPL:
 ```bash
 lake build
-./.lake/build/bin/Main
+```
+
+### Run the kernel REPL directly
+
+```bash
+./.lake/build/bin/Main-lean
+```
+
+Then type propositions and tactics interactively:
+
+```
+> new A ∧ B → B ∧ A
+> intro
+> cases 0
+> constructor
+> exact 2
+> exact 1
+```
+
+## Web UI
+
+An interactive browser-based proof REPL lives in `claude/web_repl`. It lets you type propositions, apply tactics step by step, undo moves, and run an auto-solver — all without the Lean binary.
+
+**Prerequisites:** Node.js
+
+```bash
+# 1. Build the TypeScript kernel library
+cd claude/ts_prop_logic_kernel
+npm install
+npm run build
+
+# 2. Start the dev server
+cd ../web_repl
+npm install
+npm run dev
+```
+
+Then open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## Puzzle Generation and Checking
+
+Python tooling for generating datasets of propositional logic puzzles and verifying them against the built kernel.
+
+**Prerequisites:** [uv](https://docs.astral.sh/uv/), and `lake build` completed first.
+
+```bash
+cd claude
+uv sync
+```
+
+### Generate puzzles
+
+```bash
+uv run python examples/generate_puzzles.py \
+  --min-vars 4 --max-vars 6 \
+  --min-depth 4 --max-depth 8 \
+  --examples-per-config 50
+```
+
+Output goes to `output/prop_logic_puzzle/`, organized by `num_vars` and `depth`. Run with `--help` for all options.
+
+### Verify puzzles
+
+```bash
+uv run python examples/check_puzzles.py
+```
+
+Runs every puzzle in `output/prop_logic_puzzle/` through the kernel binary and writes a `result.csv` with pass/fail per file.
+
+### Upload to HuggingFace
+
+```bash
+HF_USER=your-username uv run python examples/upload_huggingface.py
 ```
 
 ---
 
-**Technical Disclaimer:**
-This project contains components developed with AI assistance.
-- **Human-Authored**: The entire Lean 4 core (`PropLogicKernel/`, `REPL/`, `Main.lean`).
-- **AI-Generated Wrappers**: All Python integration (`main.py`, `py_prop_logic_kernel/`, `examples/`), the TypeScript port (`ts_prop_logic_kernel/`), and this documentation.
+*The Lean 4 source (`PropLogicKernel/`, `REPL/`, `Main.lean`) is written by the author. The Python tooling (`claude/py_prop_logic_kernel/`, `claude/examples/`, `claude/main.py`), TypeScript port (`claude/ts_prop_logic_kernel/`), web UI (`claude/web_repl/`), and this README were generated with AI assistance (Claude).*
