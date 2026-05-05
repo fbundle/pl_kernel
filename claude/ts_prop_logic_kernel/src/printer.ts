@@ -27,9 +27,9 @@ export function toStringP(p: P, parent?: P, strict: boolean = false): string {
   switch (p.type) {
     case 'fals': return '⊥';
     case 'var': return p.name;
-    case 'and': return addParens(`${toStringP(p.this, p, true)} ∧ ${toStringP(p.that, p, false)}`);
-    case 'or': return addParens(`${toStringP(p.this, p, true)} ∨ ${toStringP(p.that, p, false)}`);
-    case 'imp': return addParens(`${toStringP(p.this, p, true)} → ${toStringP(p.that, p, false)}`);
+    case 'and': return addParens(`${toStringP(p.left, p, true)} ∧ ${toStringP(p.right, p, false)}`);
+    case 'or': return addParens(`${toStringP(p.left, p, true)} ∨ ${toStringP(p.right, p, false)}`);
+    case 'imp': return addParens(`${toStringP(p.left, p, true)} → ${toStringP(p.right, p, false)}`);
   }
 }
 

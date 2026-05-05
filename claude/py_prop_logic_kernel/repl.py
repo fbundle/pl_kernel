@@ -5,7 +5,7 @@ import selectors
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Sequence
 
 
 class ReplError(RuntimeError):
@@ -32,7 +32,7 @@ class Repl:
         prompt: str = "> ",
         encoding: str = "utf-8",
         read_timeout_s: float = 5.0,
-        env: Optional[dict[str, str]] = None,
+        env: dict[str, str] | None = None,
     ) -> None:
         self._argv = [str(a) for a in argv]
         self._cwd = str(Path(cwd)) if cwd is not None else None
@@ -42,16 +42,11 @@ class Repl:
         self._read_timeout_s = float(read_timeout_s)
         self._env = env
 
-        self._p: Optional[subprocess.Popen[bytes]] = None
-        self._last: Optional[ReplStep] = None
-        self._graceful_exit_code: Optional[int] = None
+        self._p: subprocess.Popen[bytes] | None = None
+        self._last: ReplStep | None = None
+        self._graceful_exit_code: int | None = None
 
-    def graceful_exit_code(self) -> Optional[int]:
-        """
-        Exit code from the last *graceful* shutdown, if any.
-
-        If `finish()` had to terminate/kill due to timeout, this stays `None`.
-        """
+    def graceful_exit_code(self) -> int | None:
         return self._graceful_exit_code
 
     def start(self) -> ReplStep:
@@ -74,7 +69,6 @@ class Repl:
         )
         out, err = self._read_until_prompt()
         self._last = ReplStep(out=out, err=err, prompt=self._prompt_str)
-        assert self._last is not None
         return self._last
 
     def step(self, line: str) -> ReplStep:
@@ -92,7 +86,7 @@ class Repl:
         self._last = ReplStep(out=out, err=err, prompt=self._prompt_str)
         return self._last
 
-    def finish(self, *, timeout_s: float = 2.0) -> Optional[int]:
+    def finish(self, *, timeout_s: float = 2.0) -> int | None:
         """
         Gracefully finish the REPL by closing stdin (EOF) and waiting.
 
@@ -134,7 +128,6 @@ class Repl:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
-        # `finish()` already implements graceful EOF and forceful fallback on timeout.
         self.finish()
 
     def _read_until_prompt(self) -> tuple[str, str]:

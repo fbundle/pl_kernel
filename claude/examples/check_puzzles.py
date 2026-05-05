@@ -81,15 +81,16 @@ def main() -> None:
         for p_path, rel_path in tqdm(puzzle_files, desc="Checking"):
             try:
                 puzzle = load_puzzle_from_file(p_path)
-                # Client.check returns True if successful, raises RuntimeError otherwise
                 correct = client.check(puzzle)
             except Exception:
                 correct = False
-                # If the client crashed, restart it
                 try:
-                    if client._repl is None or client._repl._p is None or client._repl._p.poll() is not None:
-                        client = Client(exe=args.exe)
-                        client.start()
+                    client.finish()
+                except Exception:
+                    pass
+                try:
+                    client = Client(exe=args.exe)
+                    client.start()
                 except Exception:
                     pass
             

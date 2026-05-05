@@ -60,7 +60,7 @@ class REPLManager {
       const prop = parseP(input);
       const initialState: S = {
         varCount: 0,
-        sorrCount: 0,
+        sorryCount: 0,
         newCount: 0,
         stack: [{ hyp: new Map(), goal: prop }]
       };

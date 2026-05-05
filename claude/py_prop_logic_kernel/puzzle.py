@@ -4,7 +4,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Optional, Sequence
+from typing import Mapping, Sequence
 
 from .repl import Repl, ReplError
 
@@ -32,7 +32,7 @@ class Puzzle:
     proof: Sequence[str]
     settings: Mapping[str, object] | None = None
 
-    def check(self, kernel_path: str | Path = ".lake/build/bin/Main-lean") -> Optional[bool]:
+    def check(self, kernel_path: str | Path = ".lake/build/bin/Main-lean") -> bool | None:
         """
         Run this puzzle against the kernel binary using stdin (no REPL wrapper).
 
@@ -92,10 +92,10 @@ def load_puzzle_from_file(path: str | Path) -> Puzzle:
 class Step:
     out: str
     err: str
-    new_count: Optional[int]
-    sorry_count: Optional[int]
-    var_count: Optional[int]
-    goals_remaining: Optional[int]
+    new_count: int | None
+    sorry_count: int | None
+    var_count: int | None
+    goals_remaining: int | None
     all_goals_accomplished: bool
     errors: tuple[str, ...]
 
@@ -122,9 +122,9 @@ class Client:
         self._prompt = prompt
         self._read_timeout_s = float(read_timeout_s)
 
-        self._repl: Optional[Repl] = None
-        self._last: Optional[Step] = None
-        self._graceful_exit_code: Optional[int] = None
+        self._repl: Repl | None = None
+        self._last: Step | None = None
+        self._graceful_exit_code: int | None = None
 
     def start(self) -> Step:
         if self._repl is not None:
@@ -138,7 +138,7 @@ class Client:
         self._last = self._to_step(repl_step.out, repl_step.err)
         return self._last
 
-    def finish(self, *, timeout_s: float = 2.0) -> Optional[int]:
+    def finish(self, *, timeout_s: float = 2.0) -> int | None:
         if self._repl is None:
             raise RuntimeError("client not started; call start() first")
         code = self._repl.finish(timeout_s=float(timeout_s))
@@ -146,7 +146,7 @@ class Client:
         self._repl = None
         return code
 
-    def graceful_exit_code(self) -> Optional[int]:
+    def graceful_exit_code(self) -> int | None:
         return self._graceful_exit_code
 
     def last(self) -> Step:
@@ -219,10 +219,10 @@ class Client:
         all_goals_accomplished = _ALL_DONE_RE.search(err) is not None
         m = _STATUS_RE.search(err)
         if m:
-            new_count: Optional[int] = int(m.group(1))
-            sorry_count: Optional[int] = int(m.group(2))
-            var_count: Optional[int] = int(m.group(3))
-            goals: Optional[int] = int(m.group(4))
+            new_count: int | None = int(m.group(1))
+            sorry_count: int | None = int(m.group(2))
+            var_count: int | None = int(m.group(3))
+            goals: int | None = int(m.group(4))
         else:
             new_count = None
             sorry_count = None

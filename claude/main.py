@@ -36,7 +36,7 @@ def main() -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     finally:
-        c.close()
+        c.finish()
 
 
 if __name__ == "__main__":

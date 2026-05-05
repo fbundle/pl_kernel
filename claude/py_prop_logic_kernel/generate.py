@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import sys
 from dataclasses import dataclass
 
 from .puzzle import Puzzle  # package usage
@@ -81,18 +82,6 @@ class Imp(Prop):
     def size(self) -> int: return 1 + self.left.size() + self.right.size()
 
 
-def _props_equal(a: Prop, b: Prop) -> bool:
-    if type(a) is not type(b):
-        return False
-    if isinstance(a, Atom):
-        return a.name == b.name  # type: ignore[union-attr]
-    if isinstance(a, Bot):
-        return True
-    if isinstance(a, (And, Or, Imp)):
-        return _props_equal(a.left, b.left) and _props_equal(a.right, b.right)  # type: ignore[union-attr]
-    return False
-
-
 # ---------------------------------------------------------------------------
 # Settings
 # ---------------------------------------------------------------------------
@@ -158,15 +147,7 @@ def _gen_prop(
     if not weights:
         return Atom(rng.choice(atoms))
 
-    total = sum(w for _, w in weights)
-    r = rng.random() * total
-    acc = 0.0
-    chosen = weights[-1][0]
-    for name, w in weights:
-        acc += w
-        if r < acc:
-            chosen = name
-            break
+    chosen = rng.choices([n for n, _ in weights], [w for _, w in weights])[0]
 
     dl = rng.randint(0, depth - 1)
     dr = rng.randint(0, depth - 1)
@@ -339,7 +320,7 @@ def _prove(
 
     # --- exact ---
     for i, p in hyp.items():
-        if _props_equal(p, goal):
+        if p == goal:
             state.emit(f"exact {i}")
             return True
 
@@ -435,7 +416,7 @@ def _prove_atom(
 
     # exact
     for i, p in hyp.items():
-        if _props_equal(p, goal):
+        if p == goal:
             state.emit(f"exact {i}")
             return True
 
@@ -447,7 +428,7 @@ def _prove_atom(
 
     # apply: h: X→goal
     for i, p in list(hyp.items()):
-        if not (isinstance(p, Imp) and _props_equal(p.right, goal)):
+        if not (isinstance(p, Imp) and p.right == goal):
             continue
         ante = p.left
         cp = state.checkpoint()
@@ -479,7 +460,6 @@ def _prove_atom(
     return False
 
 
-import sys
 _SAVED_LIMIT = sys.getrecursionlimit()
 
 def _synthesize_proof(assumptions: list[Prop], goal: Prop, rng: random.Random) -> list[str] | None:
@@ -548,7 +528,7 @@ def _try_generate_once(rng: random.Random, settings: GenerateSettings):
         return None, "atom mismatch"
 
     # Reject trivially easy puzzles: goal must not already be in assumptions
-    if any(_props_equal(a, goal) for a in assumptions):
+    if any(a == goal for a in assumptions):
         return None, "goal is trivial (in assumptions)"
 
     stmt_prop = _build_statement(assumptions, goal)
